@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using Antlr4.Runtime;
 using Microsoft.Vbe.Interop;
 using Rubberduck.Parsing;
 using Rubberduck.Parsing.Grammar;
@@ -10,36 +11,41 @@ using Rubberduck.VBEditor;
 
 namespace Rubberduck.Inspections
 {
-    public class ObsoleteTypeHintInspectionResult : CodeInspectionResultBase
+    public class ObsoleteTypeHintInspectionResult : InspectionResultBase
+    {
+        private readonly string _result;
+        private readonly IEnumerable<CodeInspectionQuickFix> _quickFixes;
+
+        public ObsoleteTypeHintInspectionResult(IInspection inspection, string result, QualifiedContext qualifiedContext, Declaration declaration)
+            : base(inspection, qualifiedContext.ModuleName, qualifiedContext.Context)
+        {
+            _result = result;
+            _quickFixes = new CodeInspectionQuickFix[]
+            {
+                new RemoveTypeHintsQuickFix(Context, QualifiedSelection, declaration), 
+                new IgnoreOnceQuickFix(Context, QualifiedSelection, Inspection.AnnotationName), 
+            };
+        }
+
+        public override IEnumerable<CodeInspectionQuickFix> QuickFixes { get { return _quickFixes; } }
+
+        public override string Description
+        {
+            get { return _result; }
+        }
+    }
+
+    public class RemoveTypeHintsQuickFix : CodeInspectionQuickFix
     {
         private readonly Declaration _declaration;
 
-        public ObsoleteTypeHintInspectionResult(string inspection, CodeInspectionSeverity type,
-            QualifiedContext qualifiedContext, Declaration declaration)
-            : base(inspection, type, qualifiedContext.ModuleName, qualifiedContext.Context)
+        public RemoveTypeHintsQuickFix(ParserRuleContext context, QualifiedSelection selection, Declaration declaration)
+            : base(context, selection, RubberduckUI.Inspections_RemoveTypeHints)
         {
             _declaration = declaration;
         }
 
-        public override IDictionary<string, Action> GetQuickFixes()
-        {
-            return new Dictionary<string, Action>
-            {
-                { RubberduckUI.Inspections_RemoveTypeHints, RemoveTypeHints }
-            };
-        }
-
-        private static readonly IDictionary<string, string> TypeHints = new Dictionary<string, string>
-        {
-            { "%", Tokens.Integer },
-            { "&", Tokens.Long },
-            { "@", Tokens.Decimal },
-            { "!", Tokens.Single },
-            { "#", Tokens.Double },
-            { "$", Tokens.String }
-        };
-
-        private void RemoveTypeHints()
+        public override void Fix()
         {
             string hint;
             if (_declaration.HasTypeHint(out hint))
@@ -58,7 +64,18 @@ namespace Rubberduck.Inspections
                     FixTypeHintUsage(referenceHint, module, reference.Selection);
                 }
             }
+
         }
+
+        private static readonly IDictionary<string, string> TypeHints = new Dictionary<string, string>
+        {
+            { "%", Tokens.Integer },
+            { "&", Tokens.Long },
+            { "@", Tokens.Decimal },
+            { "!", Tokens.Single },
+            { "#", Tokens.Double },
+            { "$", Tokens.String }
+        };
 
         private void FixTypeHintUsage(string hint, CodeModule module, Selection selection, bool isDeclaration = false)
         {
@@ -66,7 +83,7 @@ namespace Rubberduck.Inspections
 
             var asTypeClause = ' ' + Tokens.As + ' ' + TypeHints[hint];
             var pattern = "\\b" + _declaration.IdentifierName + "\\" + hint;
-            var fix = Regex.Replace(line, pattern, _declaration.IdentifierName + (isDeclaration ? asTypeClause : string.Empty));
+            var fix = Regex.Replace(line, pattern, _declaration.IdentifierName + (isDeclaration ? asTypeClause : String.Empty));
 
             module.ReplaceLine(selection.StartLine, fix);
         }

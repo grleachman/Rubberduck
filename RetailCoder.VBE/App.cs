@@ -1,164 +1,221 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
 using System.Globalization;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Vbe.Interop;
+using NLog;
+using Rubberduck.AutoSave;
+using Rubberduck.Common;
 using Rubberduck.Inspections;
 using Rubberduck.Parsing;
 using Rubberduck.Parsing.VBA;
 using Rubberduck.Settings;
+using Rubberduck.SmartIndenter;
 using Rubberduck.UI;
-using Rubberduck.UI.CodeInspections;
+using Rubberduck.UI.Command.MenuItems;
 using Rubberduck.UI.ParserErrors;
-using Rubberduck.VBEditor;
+using Rubberduck.VBEditor.Extensions;
+using Infralution.Localization.Wpf;
 
 namespace Rubberduck
 {
     public class App : IDisposable
     {
         private readonly VBE _vbe;
-        private readonly AddIn _addIn;
-        private IList<IInspection> _inspections;
-        private Inspector _inspector;
-        private ParserErrorsPresenter _parserErrorsPresenter;
-        private readonly IGeneralConfigService _configService = new ConfigurationLoader();
-        private readonly ActiveCodePaneEditor _editor;
-        private IRubberduckParser _parser;
+        private readonly IMessageBox _messageBox;
+        private readonly IParserErrorsPresenterFactory _parserErrorsPresenterFactory;
+        private readonly IRubberduckParser _parser;
+        private readonly IInspectorFactory _inspectorFactory;
+        private readonly AutoSave.AutoSave _autoSave;
+        private readonly IGeneralConfigService _configService;
+        private readonly IAppMenu _appMenus;
+        private readonly RubberduckCommandBar _stateBar;
+        private readonly IIndenter _indenter;
+        private readonly IRubberduckHooks _hooks;
+
+        private readonly Logger _logger;
 
         private Configuration _config;
-        private RubberduckMenu _menu;
-        private FormContextMenu _formContextMenu;
-        private CodeInspectionsToolbar _codeInspectionsToolbar;
-        private bool displayToolbar = false;
-        private Point toolbarCoords = new Point(-1, -1);
 
-        public App(VBE vbe, AddIn addIn)
+        public App(VBE vbe, IMessageBox messageBox,
+            IParserErrorsPresenterFactory parserErrorsPresenterFactory,
+            IRubberduckParser parser,
+            IInspectorFactory inspectorFactory,
+            IGeneralConfigService configService,
+            IAppMenu appMenus,
+            RubberduckCommandBar stateBar,
+            IIndenter indenter/*,
+            IRubberduckHooks hooks*/)
         {
             _vbe = vbe;
-            _addIn = addIn;
+            _messageBox = messageBox;
+            _parserErrorsPresenterFactory = parserErrorsPresenterFactory;
+            _parser = parser;
+            _inspectorFactory = inspectorFactory;
+            _autoSave = new AutoSave.AutoSave(_vbe, new AutoSaveSettings());
+            _configService = configService;
+            _appMenus = appMenus;
+            _stateBar = stateBar;
+            _indenter = indenter;
+            //_hooks = hooks;
+            _logger = LogManager.GetCurrentClassLogger();
 
-            _parserErrorsPresenter = new ParserErrorsPresenter(vbe, addIn);
+            //_hooks.MessageReceived += hooks_MessageReceived;
             _configService.SettingsChanged += _configService_SettingsChanged;
+            _parser.State.StateChanged += Parser_StateChanged;
+            _stateBar.Refresh += _stateBar_Refresh;
 
-            _editor = new ActiveCodePaneEditor(vbe);
+            UiDispatcher.Initialize();
+        }
 
+        private Keys _firstStepHotKey;
+        private bool _isAwaitingTwoStepKey;
+        private bool _skipKeyUp;
+
+        private async void hooks_MessageReceived(object sender, HookEventArgs e)
+        {
+            if (sender is LowLevelKeyboardHook)
+            {
+                if (_skipKeyUp)
+                {
+                    _skipKeyUp = false;
+                    return;
+                }
+
+                if (_isAwaitingTwoStepKey)
+                {
+                    // todo: use _firstStepHotKey and e.Key to run 2-step hotkey action
+                    if (_firstStepHotKey == Keys.I && e.Key == Keys.M)
+                    {
+                        _indenter.IndentCurrentModule();
+                    }
+
+                    AwaitNextKey();
+                    return;
+                }
+
+                var component = _vbe.ActiveCodePane.CodeModule.Parent;
+                _parser.ParseComponent(component);
+
+                AwaitNextKey();
+                return;
+            }
+
+            var hotKey = sender as IHotKey;
+            if (hotKey == null)
+            {
+                AwaitNextKey();
+                return;
+            }
+
+            if (hotKey.IsTwoStepHotKey)
+            {
+                _firstStepHotKey = hotKey.HotKeyInfo.Keys;
+                AwaitNextKey(true, hotKey.HotKeyInfo);
+            }
+            else
+            {
+                // todo: use e.Key to run 1-step hotkey action
+                _firstStepHotKey = Keys.None;
+                AwaitNextKey();
+            }
+        }
+
+        private void AwaitNextKey(bool eatNextKey = false, HotKeyInfo info = default(HotKeyInfo))
+        {
+            _isAwaitingTwoStepKey = eatNextKey;
+            foreach (var hook in _hooks.Hooks.OfType<ILowLevelKeyboardHook>())
+            {
+                hook.EatNextKey = eatNextKey;
+            }
+
+            _skipKeyUp = eatNextKey;
+            if (eatNextKey)
+            {
+                _stateBar.SetStatusText("(" + info + ") was pressed. Waiting for second key...");
+            }
+            else
+            {
+                _stateBar.SetStatusText(_parser.State.Status.ToString());
+            }
+        }
+
+        private void _stateBar_Refresh(object sender, EventArgs e)
+        {
+            _parser.State.OnParseRequested();
+        }
+
+        private void Parser_StateChanged(object sender, ParserStateEventArgs e)
+        {
+            _appMenus.EvaluateCanExecute(_parser.State);
+        }
+
+        public void Startup()
+        {
+            CleanReloadConfig();
+
+            _appMenus.Initialize();
+            _appMenus.Localize();
+
+            // delay to allow the VBE to properly load. HostApplication is null until then.
+            Task.Delay(1000).ContinueWith(t =>
+            {
+                _parser.State.AddBuiltInDeclarations(_vbe.HostApplication());
+                _parser.State.OnParseRequested();
+            });
+
+            //_hooks.AddHook(new LowLevelKeyboardHook(_vbe));
+            //_hooks.AddHook(new HotKey((IntPtr)_vbe.MainWindow.HWnd, "%^R", Keys.R));
+            //_hooks.AddHook(new HotKey((IntPtr)_vbe.MainWindow.HWnd, "%^I", Keys.I));
+            //_hooks.Attach();
+        }
+
+        private void CleanReloadConfig()
+        {
             LoadConfig();
-
-            CleanUp();
-
             Setup();
         }
 
         private void _configService_SettingsChanged(object sender, EventArgs e)
         {
-            LoadConfig();
-
-            CleanUp();
-
-            Setup();
+            CleanReloadConfig();
         }
 
         private void LoadConfig()
         {
+            _logger.Debug("Loading configuration");
             _config = _configService.LoadConfiguration();
 
             var currentCulture = RubberduckUI.Culture;
             try
             {
-                RubberduckUI.Culture = CultureInfo.GetCultureInfo(_config.UserSettings.LanguageSetting.Code);
+                CultureManager.UICulture = CultureInfo.GetCultureInfo(_config.UserSettings.GeneralSettings.Language.Code);
+                _appMenus.Localize();
             }
             catch (CultureNotFoundException exception)
             {
-                MessageBox.Show(exception.Message, "Rubberduck", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                _config.UserSettings.LanguageSetting.Code = currentCulture.Name;
+                _logger.Error(exception, "Error Setting Culture for RubberDuck");
+                _messageBox.Show(exception.Message, "Rubberduck", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                _config.UserSettings.GeneralSettings.Language.Code = currentCulture.Name;
                 _configService.SaveConfiguration(_config);
             }
         }
 
         private void Setup()
         {
-            _parser = new RubberduckParser();
-            _parser.ParseStarted += _parser_ParseStarted;
-            _parser.ParserError += _parser_ParserError;
-
-            _inspector = new Inspector(_parser, _configService);
-
-            _parserErrorsPresenter = new ParserErrorsPresenter(_vbe, _addIn);
-
-            _menu = new RubberduckMenu(_vbe, _addIn, _configService, _parser, _editor, _inspector);
-            _menu.Initialize();
-
-            _formContextMenu = new FormContextMenu(_vbe, _parser);
-            _formContextMenu.Initialize();
-
-            _codeInspectionsToolbar = new CodeInspectionsToolbar(_vbe, _inspector);
-            _codeInspectionsToolbar.Initialize();
-
-            if (toolbarCoords.X != -1 && toolbarCoords.Y != -1)
-            {
-                _codeInspectionsToolbar.ToolbarCoords = toolbarCoords;
-            }
-            _codeInspectionsToolbar.ToolbarVisible = displayToolbar;
-        }
-
-        private void _parser_ParseStarted(object sender, ParseStartedEventArgs e)
-        {
-            _parserErrorsPresenter.Clear();
-        }
-
-        private void _parser_ParserError(object sender, ParseErrorEventArgs e)
-        {
-            _parserErrorsPresenter.AddError(e);
-            _parserErrorsPresenter.Show();
+            _inspectorFactory.Create();
+            _parserErrorsPresenterFactory.Create();
         }
 
         public void Dispose()
         {
-            Dispose(true);
-        }
+            //_hooks.MessageReceived -= hooks_MessageReceived;
+            _configService.SettingsChanged -= _configService_SettingsChanged;
+            _parser.State.StateChanged -= Parser_StateChanged;
+            _autoSave.Dispose();
 
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposing) { return; }
-
-            CleanUp();
-        }
-
-        private void CleanUp()
-        {
-            if (_menu != null)
-            {
-                _menu.Dispose();
-            }
-
-            if (_formContextMenu != null)
-            {
-                _formContextMenu.Dispose();
-            }
-
-            if (_codeInspectionsToolbar != null)
-            {
-                displayToolbar = _codeInspectionsToolbar.ToolbarVisible;
-                toolbarCoords = _codeInspectionsToolbar.ToolbarCoords;
-                _codeInspectionsToolbar.Dispose();
-            }
-
-            if (_inspector != null)
-            {
-                _inspector.Dispose();
-            }
-
-            if (_parserErrorsPresenter != null)
-            {
-                _parserErrorsPresenter.Dispose();
-            }
-
-            if (_parser != null)
-            {
-                _parser.ParseStarted -= _parser_ParseStarted;
-                _parser.ParserError -= _parser_ParserError;
-            }
+            //_hooks.Dispose();
         }
     }
 }

@@ -24,7 +24,7 @@ namespace Rubberduck.UI.Refactorings
         private void InitializeCaptions()
         {
             OkButton.Text = RubberduckUI.OK;
-            CancelButton.Text = RubberduckUI.CancelButtonText;
+            CancelDialogButton.Text = RubberduckUI.CancelButtonText;
             Text = RubberduckUI.RemoveParamsDialog_Caption;
             TitleLabel.Text = RubberduckUI.RemoveParamsDialog_TitleText;
             InstructionsLabel.Text = RubberduckUI.RemoveParamsDialog_InstructionsLabelText;
@@ -60,27 +60,6 @@ namespace Rubberduck.UI.Refactorings
             MethodParametersGrid.Columns.Add(column);
         }
 
-        private void OkButtonClick(object sender, EventArgs e)
-        {
-            OnOkButtonClicked();
-        }
-
-        public event EventHandler CancelButtonClicked;
-        public void OnCancelButtonClicked()
-        {
-            Hide();
-        }
-
-        public event EventHandler OkButtonClicked;
-        public void OnOkButtonClicked()
-        {
-            var handler = OkButtonClicked;
-            if (handler != null)
-            {
-                handler(this, EventArgs.Empty);
-            }
-        }
-
         private void MarkAsRemovedParam()
         {
             if (_selectedItem != null)
@@ -88,7 +67,7 @@ namespace Rubberduck.UI.Refactorings
                 var indexOfRemoved = Parameters.FindIndex(item => item == _selectedItem);
 
                 Parameters.ElementAt(indexOfRemoved).IsRemoved = true;
-                MethodParametersGrid.Rows[indexOfRemoved].DefaultCellStyle.Font = new Font(this.Font, FontStyle.Strikeout);
+                MethodParametersGrid.Rows[indexOfRemoved].DefaultCellStyle.Font = new Font(Font, FontStyle.Strikeout);
 
                 SelectionChanged();
             }
@@ -101,7 +80,7 @@ namespace Rubberduck.UI.Refactorings
                 var indexOfRemoved = Parameters.FindIndex(item => item == _selectedItem);
 
                 Parameters.ElementAt(indexOfRemoved).IsRemoved = false;
-                MethodParametersGrid.Rows[indexOfRemoved].DefaultCellStyle.Font = new Font(this.Font, FontStyle.Regular);
+                MethodParametersGrid.Rows[indexOfRemoved].DefaultCellStyle.Font = new Font(Font, FontStyle.Regular);
 
                 SelectionChanged();
             }

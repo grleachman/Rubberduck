@@ -1,22 +1,23 @@
 using System;
+using System.Collections.Generic;
 using Rubberduck.Parsing.Symbols;
 using Rubberduck.UI.Refactorings;
 using Rubberduck.VBEditor;
 
 namespace Rubberduck.Refactorings.ExtractMethod
 {
-    public class ExtractMethodPresenterFactory : IRefactoringPresenterFactory<ExtractMethodPresenter>
+    public class ExtractMethodPresenterFactory : IRefactoringPresenterFactory<IExtractMethodPresenter>
     {
         private readonly IActiveCodePaneEditor _editor;
-        private readonly Declarations _declarations;
+        private readonly IEnumerable<Declaration> _declarations;
 
-        public ExtractMethodPresenterFactory(IActiveCodePaneEditor editor, Declarations declarations)
+        public ExtractMethodPresenterFactory(IActiveCodePaneEditor editor, IEnumerable<Declaration> declarations)
         {
             _editor = editor;
             _declarations = declarations;
         }
 
-        public ExtractMethodPresenter Create()
+        public IExtractMethodPresenter Create()
         {
             var selection = _editor.GetSelection();
             if (selection == null)

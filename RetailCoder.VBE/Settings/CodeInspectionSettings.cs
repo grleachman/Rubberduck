@@ -31,8 +31,25 @@ namespace Rubberduck.Settings
         [XmlIgnore]
         public string Description { get; set; } // not serialized because culture-dependent
 
+        [XmlIgnore]
+        public string AnnotationName { get; set; }
+
         [XmlAttribute]
         public CodeInspectionSeverity Severity { get; set; }
+
+        [XmlIgnore]
+        public string Meta {
+            get
+            {
+                return InspectionsUI.ResourceManager.GetString(Name + "Meta");
+            }
+        }
+
+        [XmlIgnore]
+        public string TypeLabel
+        {
+            get { return RubberduckUI.ResourceManager.GetString("CodeInspectionSettings_" + InspectionType); }
+        }
 
         [XmlIgnore]
         public string SeverityLabel

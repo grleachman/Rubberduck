@@ -14,7 +14,6 @@ namespace Rubberduck.UI.Refactorings
             InitializeComponent();
             InitializeCaptions();
 
-            OkButton.Click += OkButtonClick;
             Shown += RenameDialog_Shown;
             NewNameBox.TextChanged += NewNameBox_TextChanged;
         }
@@ -23,7 +22,7 @@ namespace Rubberduck.UI.Refactorings
         {
             Text = RubberduckUI.RenameDialog_Caption;
             OkButton.Text = RubberduckUI.OK;
-            CancelButton.Text = RubberduckUI.CancelButtonText;
+            CancelDialogButton.Text = RubberduckUI.CancelButtonText;
             TitleLabel.Text = RubberduckUI.RenameDialog_TitleText;
             InstructionsLabel.Text = RubberduckUI.RenameDialog_InstructionsLabelText;
             NameLabel.Text = RubberduckUI.NameLabelText;
@@ -40,31 +39,7 @@ namespace Rubberduck.UI.Refactorings
             NewNameBox.Focus();
         }
 
-        private void OkButtonClick(object sender, EventArgs e)
-        {
-            OnOkButtonClicked();
-        }
-
-        public event EventHandler CancelButtonClicked;
-
-        public void OnCancelButtonClicked()
-        {
-            Hide();
-        }
-
-        public event EventHandler OkButtonClicked;
-
-        public void OnOkButtonClicked()
-        {
-            var handler = OkButtonClicked;
-            if (handler != null)
-            {
-                handler(this, EventArgs.Empty);
-            }
-        }
-
         private Declaration _target;
-
         public Declaration Target
         {
             get { return _target; }
@@ -96,11 +71,11 @@ namespace Rubberduck.UI.Refactorings
 
         private void ValidateNewName()
         {
-            var tokenValues = typeof(Tokens).GetFields().Select(item => item.GetValueDirect(new TypedReference())).Cast<string>().Select(item => item.ToLower());
+            var tokenValues = typeof(Tokens).GetFields().Select(item => item.GetValue(null)).Cast<string>().Select(item => item);
 
             OkButton.Enabled = NewName != Target.IdentifierName
                                && char.IsLetter(NewName.FirstOrDefault())
-                               && !tokenValues.Contains(NewName.ToLower())
+                               && !tokenValues.Contains(NewName, StringComparer.InvariantCultureIgnoreCase)
                                && !NewName.Any(c => !char.IsLetterOrDigit(c) && c != '_');
 
             InvalidNameValidationIcon.Visible = !OkButton.Enabled;

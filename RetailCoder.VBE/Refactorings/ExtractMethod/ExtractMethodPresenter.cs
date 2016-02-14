@@ -6,7 +6,12 @@ using Rubberduck.Parsing.Grammar;
 
 namespace Rubberduck.Refactorings.ExtractMethod
 {
-    public class ExtractMethodPresenter
+    public interface IExtractMethodPresenter
+    {
+        ExtractMethodModel Show();
+    }
+
+    public class ExtractMethodPresenter : IExtractMethodPresenter
     {
         private readonly IExtractMethodDialog _view;
         private readonly ExtractMethodModel _model;
@@ -31,6 +36,7 @@ namespace Rubberduck.Refactorings.ExtractMethod
 
         private void PrepareView()
         {
+            _view.OldMethodName = _model.SourceMember.IdentifierName;
             _view.MethodName = _model.SourceMember.IdentifierName + "_1";
             _view.Inputs = _model.Inputs;
             _view.Outputs = _model.Outputs;

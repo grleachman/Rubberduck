@@ -2,25 +2,29 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
 using Rubberduck.Inspections;
 using Rubberduck.ToDoItems;
 using Rubberduck.UI;
+using MessageBox = System.Windows.Forms.MessageBox;
 
 namespace Rubberduck.Settings
 {
     public interface IGeneralConfigService : IConfigurationService<Configuration>
     {
-        CodeInspectionSetting[] GetDefaultCodeInspections();
         Configuration GetDefaultConfiguration();
-        ToDoMarker[] GetDefaultTodoMarkers();
-        IList<IInspection> GetImplementedCodeInspections();
     }
 
     public class ConfigurationLoader : XmlConfigurationServiceBase<Configuration>, IGeneralConfigService
     {
+        private readonly IEnumerable<IInspection> _inspections;
+
+        public ConfigurationLoader(IEnumerable<IInspection> inspections)
+        {
+            _inspections = inspections;
+        }
+
         protected override string ConfigFile
         {
             get { return Path.Combine(rootPath, "rubberduck.config"); }
@@ -39,9 +43,9 @@ namespace Rubberduck.Settings
 
             var config = base.LoadConfiguration();
 
-            if (config.UserSettings.LanguageSetting == null)
+            if (config.UserSettings.GeneralSettings == null)
             {
-                config.UserSettings.LanguageSetting = new DisplayLanguageSetting("en-US");
+                config.UserSettings.GeneralSettings = GetDefaultGeneralSettings();
             }
 
             if (config.UserSettings.ToDoListSettings == null)
@@ -54,10 +58,19 @@ namespace Rubberduck.Settings
                 config.UserSettings.CodeInspectionSettings = new CodeInspectionSettings(GetDefaultCodeInspections());
             }
 
-            var implementedInspections = GetImplementedCodeInspections();
+            if (config.UserSettings.UnitTestSettings == null)
+            {
+                config.UserSettings.UnitTestSettings = new UnitTestSettings();
+            }
+
+            if (config.UserSettings.IndenterSettings == null)
+            {
+                config.UserSettings.IndenterSettings = GetDefaultIndenterSettings();
+            }
+
             var configInspections = config.UserSettings.CodeInspectionSettings.CodeInspections.ToList();
             
-            configInspections = MergeImplementedInspectionsNotInConfig(configInspections, implementedInspections);
+            configInspections = MergeImplementedInspectionsNotInConfig(configInspections, _inspections);
             config.UserSettings.CodeInspectionSettings.CodeInspections = configInspections.ToArray();
 
             return config;
@@ -90,7 +103,7 @@ namespace Rubberduck.Settings
             return config;
         }
 
-        private List<CodeInspectionSetting> MergeImplementedInspectionsNotInConfig(List<CodeInspectionSetting> configInspections, IList<IInspection> implementedInspections)
+        private List<CodeInspectionSetting> MergeImplementedInspectionsNotInConfig(List<CodeInspectionSetting> configInspections, IEnumerable<IInspection> implementedInspections)
         {
             foreach (var implementedInspection in implementedInspections)
             {
@@ -111,19 +124,30 @@ namespace Rubberduck.Settings
         public Configuration GetDefaultConfiguration()
         {
             var userSettings = new UserSettings(
-                                    new DisplayLanguageSetting("en-US"), 
+                                    GetDefaultGeneralSettings(), 
                                     new ToDoListSettings(GetDefaultTodoMarkers()),
-                                    new CodeInspectionSettings(GetDefaultCodeInspections())
-                               );
+                                    new CodeInspectionSettings(GetDefaultCodeInspections()),
+                                    new UnitTestSettings(),
+                                    GetDefaultIndenterSettings());
 
             return new Configuration(userSettings);
         }
 
+        private GeneralSettings GetDefaultGeneralSettings()
+        {
+            return new GeneralSettings(new DisplayLanguageSetting("en-US"),
+                new[]
+                {
+                    new Hotkey{Name="Indent Module", IsEnabled=true, KeyDisplaySymbol="CTRL-M", Prompt="Enable Indent Module Hotkey"},
+                    new Hotkey{Name="Indent Procedure", IsEnabled=true, KeyDisplaySymbol="CTRL-P", Prompt="Enable Indent Procedure Hotkey"}
+                });
+        }
+
         public ToDoMarker[] GetDefaultTodoMarkers()
         {
-            var note = new ToDoMarker(RubberduckUI.ToDoMarkerNote, TodoPriority.Low);
-            var todo = new ToDoMarker(RubberduckUI.ToDoMarkerToDo, TodoPriority.Medium);
-            var bug = new ToDoMarker(RubberduckUI.ToDoMarkerBug, TodoPriority.High);
+            var note = new ToDoMarker(RubberduckUI.TodoMarkerNote, TodoPriority.Low);
+            var todo = new ToDoMarker(RubberduckUI.TodoMarkerTodo, TodoPriority.Medium);
+            var bug = new ToDoMarker(RubberduckUI.TodoMarkerBug, TodoPriority.High);
 
             return new[] { note, todo, bug };
         }
@@ -132,27 +156,32 @@ namespace Rubberduck.Settings
         /// <returns>   An array of Config.CodeInspection. </returns>
         public CodeInspectionSetting[] GetDefaultCodeInspections()
         {
-            return GetImplementedCodeInspections()
-                    .Select(x => new CodeInspectionSetting(x))
-                    .ToArray();
+            return _inspections.Select(x => new CodeInspectionSetting(x)).ToArray();
         }
 
-        /// <summary>   Gets all implemented code inspections via reflection </summary>
-        public IList<IInspection> GetImplementedCodeInspections()
+        public IndenterSettings GetDefaultIndenterSettings()
         {
-            var inspections = Assembly.GetExecutingAssembly()
-                                  .GetTypes()
-                                  .Where(type => type.GetInterfaces().Contains(typeof(IInspection)))
-                                  .Select(type =>
-                                  {
-                                      var constructor = type.GetConstructor(Type.EmptyTypes);
-                                      return constructor != null ? constructor.Invoke(Type.EmptyTypes) : null;
-                                  })
-                                 .Where(inspection => inspection != null)
-                                  .Cast<IInspection>()
-                                  .ToList();
-
-            return inspections;
+            return new IndenterSettings
+            {
+                IndentProcedure = true,
+                IndentFirst = false,
+                IndentDim = true,
+                IndentComment = true,
+                IndentCase = false,
+                AlignContinuations = true,
+                AlignIgnoreOps = true,
+                ForceDebugStatementsInColumn1 = false,
+                ForceCompilerStuffInColumn1 = false,
+                IndentCompilerStuff = true,
+                AlignDim = false,
+                AlignDimColumn = 15,
+                EnableUndo = true,
+                EnableIndentProcedureHotKey = true,
+                EnableIndentModuleHotKey = true,
+                EndOfLineAlignColumn = 55,
+                IndentSpaces = 4, // should read/write this value from VBE registry settings
+                AlignEndOfLine = false
+            };
         }
     }
 }

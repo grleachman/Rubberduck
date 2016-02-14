@@ -193,16 +193,16 @@
   <data name="SettingsCaption_CodeInspections" xml:space="preserve">
     <value>Code Inspection Settings</value>
   </data>
-  <data name="SettingsCaption_ToDoSettings" xml:space="preserve">
-    <value>ToDo Settings</value>
+  <data name="SettingsCaption_TodoSettings" xml:space="preserve">
+    <value>Todo Settings</value>
   </data>
-  <data name="SettingsInstructions_CodeInspections" xml:space="preserve">
+  <data name="SettingsInstructions_InspectionSettings" xml:space="preserve">
     <value>Configure inspection severity. Use "DoNotShow" to disable an inspection.</value>
   </data>
   <data name="SettingsInstructions_GeneralSettings" xml:space="preserve">
     <value>Click [Ok] to close the window and apply changes, or [Cancel] to discard them.</value>
   </data>
-  <data name="SettingsInstructions_ToDoSettings" xml:space="preserve">
+  <data name="SettingsInstructions_TodoSettings" xml:space="preserve">
     <value>Configure markers to be recognized in comments.</value>
   </data>
   <data name="RenameDialog_ProjectRenameError" xml:space="preserve">
@@ -262,7 +262,7 @@
     <value>Remove parameters</value>
   </data>
   <data name="Refactoring_TargetIsInterfaceMemberImplementation" xml:space="preserve">
-    <value>Method '{0}' implements '{1}.{2}'. Change interface signature? (will propagate to all implementations)</value>
+    <value>Method '{0}' implements '{1}.{2}'. Change interface signature? (Will propagate to all implementations.)</value>
     <comment>0: Selected target; 1: Interface name; 2: Interface member name</comment>
   </data>
   <data name="RemoveParamsDialog_RemoveIllegalSetterLetterParameter" xml:space="preserve">
@@ -317,7 +317,7 @@
     <value>&amp;Rename</value>
   </data>
   <data name="RefactorMenu_ReorderParameters" xml:space="preserve">
-    <value>Reorder &amp;Parameters</value>
+    <value>Re&amp;order Parameters</value>
   </data>
   <data name="RubberduckMenu" xml:space="preserve">
     <value>Ru&amp;bberduck</value>
@@ -340,7 +340,7 @@
   <data name="RubberduckMenu_SourceControl" xml:space="preserve">
     <value>&amp;Source Control</value>
   </data>
-  <data name="RubberduckMenu_ToDoItems" xml:space="preserve">
+  <data name="RubberduckMenu_TodoItems" xml:space="preserve">
     <value>To&amp;Do Items</value>
   </data>
   <data name="RubberduckMenu_UnitTests" xml:space="preserve">
@@ -412,7 +412,7 @@
   <data name="Inspections_SplitDeclarations" xml:space="preserve">
     <value>Separate multiple declarations into multiple instructions</value>
   </data>
-  <data name="Inspections_UnassignedVariableToDo" xml:space="preserve">
+  <data name="Inspections_UnassignedVariableTodo" xml:space="preserve">
     <value>TODO</value>
   </data>
   <data name="LoadConfigError" xml:space="preserve">
@@ -434,7 +434,7 @@ Would you like to restore default configuration?
 Warning: All customized settings will be lost.  Your old file will be saved in '{3}'.</value>
   </data>
   <data name="ResolutionProgress" xml:space="preserve">
-    <value>Resolving '{0}'...</value>
+    <value>Resolving...</value>
   </data>
   <data name="RubberduckLoadFailure" xml:space="preserve">
     <value>Rubberduck Add-In could not be loaded</value>
@@ -443,14 +443,14 @@ Warning: All customized settings will be lost.  Your old file will be saved in '
     <value>Build {0} ({1})</value>
     <comment>0: Version; 1: ProcessorArchitecture</comment>
   </data>
-  <data name="ToDoMarkerBug" xml:space="preserve">
-    <value>BUG:</value>
+  <data name="TodoMarkerBug" xml:space="preserve">
+    <value>BUG </value>
   </data>
-  <data name="ToDoMarkerNote" xml:space="preserve">
-    <value>NOTE:</value>
+  <data name="TodoMarkerNote" xml:space="preserve">
+    <value>NOTE </value>
   </data>
-  <data name="ToDoMarkerToDo" xml:space="preserve">
-    <value>TODO:</value>
+  <data name="TodoMarkerTodo" xml:space="preserve">
+    <value>TODO </value>
   </data>
   <data name="AllImplementations_Caption" xml:space="preserve">
     <value>Implementations of '{0}'</value>
@@ -528,8 +528,8 @@ Warning: All customized settings will be lost.  Your old file will be saved in '
   <data name="TestExplorerWindow_Caption" xml:space="preserve">
     <value>Test Explorer</value>
   </data>
-  <data name="ToDoExplorer_Caption" xml:space="preserve">
-    <value>ToDo Explorer</value>
+  <data name="TodoExplorer_Caption" xml:space="preserve">
+    <value>Todo Explorer</value>
   </data>
   <data name="Warning" xml:space="preserve">
     <value>Warning</value>
@@ -583,7 +583,7 @@ Warning: All customized settings will be lost.  Your old file will be saved in '
     <value>Potentially confusing implicit array lower bound</value>
   </data>
   <data name="OptionExplicit" xml:space="preserve">
-    <value>Option Explicit is not specified</value>
+    <value>Option Explicit is not specified in '{0}'</value>
   </data>
   <data name="ParameterCanBeByVal_" xml:space="preserve">
     <value>Parameter '{0}' can be passed by value</value>
@@ -629,6 +629,9 @@ Warning: All customized settings will be lost.  Your old file will be saved in '
   </data>
   <data name="Language_FR" xml:space="preserve">
     <value>French</value>
+  </data>
+  <data name="Language_JA" xml:space="preserve">
+    <value>Japanese</value>
   </data>
   <data name="RemoveParamsDialog_Caption" xml:space="preserve">
     <value>Rubberduck - Remove Parameters</value>
@@ -721,16 +724,16 @@ Warning: All customized settings will be lost.  Your old file will be saved in '
     <value>Project Name</value>
   </data>
   <data name="TestExplorer_AddButtonText" xml:space="preserve">
-    <value>&amp;Add</value>
+    <value>Add</value>
   </data>
   <data name="TestExplorer_AddExpectedErrorTestMethod" xml:space="preserve">
-    <value>Test Method (Expected &amp;Error)</value>
+    <value>Test Method (Expected Error)</value>
   </data>
   <data name="TestExplorer_AddTestMethod" xml:space="preserve">
-    <value>&amp;Test Method</value>
+    <value>Test Method</value>
   </data>
   <data name="TestExplorer_AddTestModule" xml:space="preserve">
-    <value>Test &amp;Module</value>
+    <value>Test Module</value>
   </data>
   <data name="TestExplorer_Duration" xml:space="preserve">
     <value>Duration</value>
@@ -751,28 +754,28 @@ Warning: All customized settings will be lost.  Your old file will be saved in '
     <value>Qualified Member Name</value>
   </data>
   <data name="TestExplorer_RunAllTests" xml:space="preserve">
-    <value>&amp;All Tests</value>
+    <value>All Tests</value>
   </data>
   <data name="TestExplorer_RunButtonText" xml:space="preserve">
-    <value>&amp;Run</value>
+    <value>Run</value>
   </data>
   <data name="Run" xml:space="preserve">
     <value>Run</value>
   </data>
   <data name="TestExplorer_RunFailedTests" xml:space="preserve">
-    <value>&amp;Failed Tests</value>
+    <value>Failed Tests</value>
   </data>
   <data name="TestExplorer_RunLastRunTests" xml:space="preserve">
-    <value>Repeat &amp;Last Run</value>
+    <value>Repeat Last Run</value>
   </data>
   <data name="TestExplorer_RunNotRunTests" xml:space="preserve">
-    <value>&amp;Not Run Tests</value>
+    <value>Not Run Tests</value>
   </data>
   <data name="TestExplorer_RunPassedTests" xml:space="preserve">
-    <value>&amp;Passed Tests</value>
+    <value>Passed Tests</value>
   </data>
   <data name="TestExplorer_RunSelectedTests" xml:space="preserve">
-    <value>&amp;Selected Tests</value>
+    <value>Selected Tests</value>
   </data>
   <data name="GenericProjectName_" xml:space="preserve">
     <value>Project '{0}' has generic name</value>
@@ -904,15 +907,11 @@ Are you sure you want to proceed with this rename?</value>
   <data name="About_Stargazers" xml:space="preserve">
     <value>All our stargazers, likers &amp; followers, for the warm fuzzies</value>
   </data>
-  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="Ducky" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Ducky.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
   <data name="SourceControlPanel_Caption" xml:space="preserve">
     <value>Source Control</value>
   </data>
   <data name="SourceControl_AttributesFile" xml:space="preserve">
-    <value>Attributes File</value>
+    <value>'.gitattributes' File</value>
   </data>
   <data name="SourceControl_CancelGlobalSettings" xml:space="preserve">
     <value>Cancel</value>
@@ -927,7 +926,7 @@ Are you sure you want to proceed with this rename?</value>
     <value>Global Settings</value>
   </data>
   <data name="SourceControl_IgnoreFile" xml:space="preserve">
-    <value>Ignore File</value>
+    <value>'.gitignore' File</value>
   </data>
   <data name="SourceControl_InitRepoButtonToolTip" xml:space="preserve">
     <value>Init New Repo from this Project</value>
@@ -1073,13 +1072,13 @@ Are you sure you want to proceed with this rename?</value>
   <data name="SourceControl_NoRepoFound" xml:space="preserve">
     <value>No repository found.</value>
   </data>
-  <data name="ToDoPriority_High" xml:space="preserve">
+  <data name="TodoPriority_High" xml:space="preserve">
     <value>High</value>
   </data>
-  <data name="ToDoPriority_Low" xml:space="preserve">
+  <data name="TodoPriority_Low" xml:space="preserve">
     <value>Low</value>
   </data>
-  <data name="ToDoPriority_Medium" xml:space="preserve">
+  <data name="TodoPriority_Medium" xml:space="preserve">
     <value>Medium</value>
   </data>
   <data name="SourceControl_SuccessfulMerge" xml:space="preserve">
@@ -1115,5 +1114,249 @@ Are you sure you want to proceed with this rename?</value>
   </data>
   <data name="TodoSettings_Text" xml:space="preserve">
     <value>Text</value>
+  </data>
+  <data name="Inspections_MultilineParameter" xml:space="preserve">
+    <value>Write variable on one line</value>
+  </data>
+  <data name="Language_DE" xml:space="preserve">
+    <value>German</value>
+  </data>
+  <data name="RubberduckMenu_Navigate" xml:space="preserve">
+    <value>Na&amp;vigate</value>
+  </data>
+  <data name="RegexSearchReplaceScope_AllOpenedFiles" xml:space="preserve">
+    <value>All Opened Files</value>
+  </data>
+  <data name="RegexSearchReplaceScope_AllOpenProjects" xml:space="preserve">
+    <value>All Open Projects</value>
+  </data>
+  <data name="RegexSearchReplaceScope_CurrentBlock" xml:space="preserve">
+    <value>Current Block</value>
+  </data>
+  <data name="RegexSearchReplaceScope_CurrentFile" xml:space="preserve">
+    <value>Current File</value>
+  </data>
+  <data name="RegexSearchReplaceScope_CurrentProject" xml:space="preserve">
+    <value>Current Project</value>
+  </data>
+  <data name="RegexSearchReplaceScope_Selection" xml:space="preserve">
+    <value>Selection</value>
+  </data>
+  <data name="RegexSearchReplace_Caption" xml:space="preserve">
+    <value>Regex Search &amp; Replace</value>
+  </data>
+  <data name="RegexSearchReplace_FindButtonLabel" xml:space="preserve">
+    <value>Find</value>
+  </data>
+  <data name="RegexSearchReplace_ReplaceAllButtonLabel" xml:space="preserve">
+    <value>Replace All</value>
+  </data>
+  <data name="RegexSearchReplace_ReplaceButtonLabel" xml:space="preserve">
+    <value>Replace</value>
+  </data>
+  <data name="RegexSearchReplace_ReplaceLabel" xml:space="preserve">
+    <value>Replace:</value>
+  </data>
+  <data name="RegexSearchReplace_ScopeLabel" xml:space="preserve">
+    <value>Scope:</value>
+  </data>
+  <data name="RegexSearchReplace_SearchLabel" xml:space="preserve">
+    <value>Search:</value>
+  </data>
+  <data name="Inspections_SpecifyOptionExplicit" xml:space="preserve">
+    <value>Specify 'Option Explicit'</value>
+  </data>
+  <data name="QuickFix_ThisModule" xml:space="preserve">
+    <value>Fix all occurrences in module</value>
+  </data>
+  <data name="QuickFix_ThisProject" xml:space="preserve">
+    <value>Fix all occurrences in project</value>
+  </data>
+  <data name="WriteOnlyProperty_" xml:space="preserve">
+    <value>Property '{0}' has no getter.</value>
+  </data>
+  <data name="UntypedFunctionUsage_" xml:space="preserve">
+    <value>Use of untyped function '{0}'. String-returning version '{0}$' is available.</value>
+  </data>
+  <data name="QuickFixUseTypedFunction_" xml:space="preserve">
+    <value>Change '{0}$' to '{0}'</value>
+  </data>
+  <data name="DisableThisInspection" xml:space="preserve">
+    <value>Disable this inspection</value>
+  </data>
+  <data name="ParserProgress_ShowDetails" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="ImplicitActiveSheetReference_" xml:space="preserve">
+    <value>'{0}' is an implicit reference to the active worksheet</value>
+  </data>
+  <data name="ImplicitActiveWorkbookReference_" xml:space="preserve">
+    <value>'{0}' is an implicit reference to the active workbook</value>
+  </data>
+  <data name="MakeActiveSheetReferenceExplicit" xml:space="preserve">
+    <value>Make ActiveSheet reference explicit</value>
+  </data>
+  <data name="MakeActiveWorkbookReferenceExplicit" xml:space="preserve">
+    <value>Make ActiveWorkbook reference explicit</value>
+  </data>
+  <data name="CodeExplorer_NewToolTip" xml:space="preserve">
+    <value>Add a component to the active project</value>
+  </data>
+  <data name="CodeExplorer_DisplayModeToolTip" xml:space="preserve">
+    <value>Display style</value>
+  </data>
+  <data name="FindSymbolDialog_Caption" xml:space="preserve">
+    <value>Find symbol</value>
+  </data>
+  <data name="IndentCurrentModule" xml:space="preserve">
+    <value>Current module</value>
+  </data>
+  <data name="IndentCurrentProcedure" xml:space="preserve">
+    <value>Current procedure</value>
+  </data>
+  <data name="IndentCurrentProject" xml:space="preserve">
+    <value>Entire project</value>
+  </data>
+  <data name="SmartIndenterMenu" xml:space="preserve">
+    <value>Indent</value>
+  </data>
+  <data name="RefactorMenu_IntroduceParameter" xml:space="preserve">
+    <value>&amp;Introduce Parameter</value>
+  </data>
+  <data name="RefactorMenu_IntroduceField" xml:space="preserve">
+    <value>Introduce &amp;Field</value>
+  </data>
+  <data name="PromoteVariable_InvalidSelection" xml:space="preserve">
+    <value>Selection is not a variable.</value>
+    <comment>Used in both Introduce Parameter and Introduce Field</comment>
+  </data>
+  <data name="RefactorMenu_EncapsulateField" xml:space="preserve">
+    <value>&amp;Encapsulate Field</value>
+  </data>
+  <data name="EncapsulateField_Caption" xml:space="preserve">
+    <value>Rubberduck - Encapsulate Field</value>
+  </data>
+  <data name="EncapsulateField_InstructionText" xml:space="preserve">
+    <value>Please specify property name, parameter accessibility, and setter type.</value>
+  </data>
+  <data name="EncapsulateField_Preview" xml:space="preserve">
+    <value>Preview:</value>
+  </data>
+  <data name="EncapsulateField_PropertyName" xml:space="preserve">
+    <value>Property Name:</value>
+  </data>
+  <data name="EncapsulateField_SetterType" xml:space="preserve">
+    <value>Setter Type:</value>
+  </data>
+  <data name="EncapsulateField_TitleText" xml:space="preserve">
+    <value>Encapsulate Field</value>
+  </data>
+  <data name="EncapsulateField_ParameterName" xml:space="preserve">
+    <value>Parameter Name:</value>
+  </data>
+  <data name="SourceControl_DeleteBranchButton" xml:space="preserve">
+    <value>Delete branch</value>
+  </data>
+  <data name="RefactorMenu_MoveCloserToUsage" xml:space="preserve">
+    <value>Move Closer To &amp;Usage</value>
+  </data>
+  <data name="MoveCloserToUsage_Caption" xml:space="preserve">
+    <value>Rubberduck - Move Closer To Usage</value>
+  </data>
+  <data name="MoveCloserToUsage_TargetHasNoReferences" xml:space="preserve">
+    <value>'{0}' is not used anywhere.</value>
+    <comment>{0}: Variable Name</comment>
+  </data>
+  <data name="MoveCloserToUsage_TargetIsUsedInMultipleMethods" xml:space="preserve">
+    <value>'{0}' has references in multiple methods.</value>
+    <comment>{0}: Variable Name</comment>
+  </data>
+  <data name="IntroduceField_Caption" xml:space="preserve">
+    <value>Rubberduck - Introduce Field</value>
+  </data>
+  <data name="IntroduceParameter_Caption" xml:space="preserve">
+    <value>Rubberduck - Introduce Parameter</value>
+  </data>
+  <data name="IntroduceParameter_PromptIfTargetIsInterface" xml:space="preserve">
+    <value>Method '{0}' implements '{1}.{2}'. Change interface signature? (Will propagate to all implementations.)</value>
+    <comment>0: Selected target; 1: Interface name; 2: Interface member name</comment>
+  </data>
+  <data name="RefactorMenu_ExtractInterface" xml:space="preserve">
+    <value>E&amp;xtract Interface</value>
+  </data>
+  <data name="RefactorMenu_ImplementInterface" xml:space="preserve">
+    <value>Implement Interface</value>
+  </data>
+  <data name="ImplementInterface_Caption" xml:space="preserve">
+    <value>Rubberduck - Implement Interface</value>
+  </data>
+  <data name="ImplementInterface_InvalidSelectionMessage" xml:space="preserve">
+    <value>The current selection is not valid.</value>
+  </data>
+  <data name="MoveCloserToUsage_InvalidSelection" xml:space="preserve">
+    <value>Invalid Selection.</value>
+  </data>
+  <data name="ExtractInterface_Caption" xml:space="preserve">
+    <value>Rubberduck - Extract Interface</value>
+  </data>
+  <data name="ExtractInterface_TitleLabel" xml:space="preserve">
+    <value>Extract Interface</value>
+  </data>
+  <data name="ExtractInterface_InstructionLabel" xml:space="preserve">
+    <value>Please specify interface name and members.</value>
+  </data>
+  <data name="SelectAll_Button" xml:space="preserve">
+    <value>Select All</value>
+  </data>
+  <data name="DeselectAll_Button" xml:space="preserve">
+    <value>Deselect All</value>
+  </data>
+  <data name="ExtractInterface_MembersGroupBox" xml:space="preserve">
+    <value>Members</value>
+  </data>
+  <data name="SettingsCaption_UnitTestSettings" xml:space="preserve">
+    <value>Unit Test Settings</value>
+  </data>
+  <data name="SeverityLabelText" xml:space="preserve">
+    <value>Severity:</value>
+  </data>
+  <data name="SettingsCaption_IndenterSettings" xml:space="preserve">
+    <value>Indenter Settings</value>
+  </data>
+  <data name="SettingsInstructions_IndenterSettings" xml:space="preserve">
+    <value>Configure indenter settings.</value>
+  </data>
+  <data name="SettingsInstructions_UnitTestSettings" xml:space="preserve">
+    <value>Configure the settings for new unit test modules and methods.</value>
+  </data>
+  <data name="UnitTestSettings_AssertMode" xml:space="preserve">
+    <value>Test method assert mode:</value>
+  </data>
+  <data name="UnitTestSettings_BindingMode" xml:space="preserve">
+    <value>Test method binding mode:</value>
+  </data>
+  <data name="UnitTestSettings_EarlyBinding" xml:space="preserve">
+    <value>Early binding</value>
+  </data>
+  <data name="UnitTestSettings_IncludeTestMethodInitCleanupPrompt" xml:space="preserve">
+    <value>Include test method initialization/cleanup?</value>
+  </data>
+  <data name="UnitTestSettings_IncludeTestMethodStubWhenCreatingModulePrompt" xml:space="preserve">
+    <value>Include test method stub when creating a test module?</value>
+  </data>
+  <data name="UnitTestSettings_IncludeTestModuleInitCleanupPrompt" xml:space="preserve">
+    <value>Include test module initialization/cleanup?</value>
+  </data>
+  <data name="UnitTestSettings_LateBinding" xml:space="preserve">
+    <value>Late binding</value>
+  </data>
+  <data name="UnitTestSettings_PermissiveAssert" xml:space="preserve">
+    <value>Permissive assert</value>
+  </data>
+  <data name="UnitTestSettings_StrictAssert" xml:space="preserve">
+    <value>Strict assert</value>
+  </data>
+  <data name="UnitTestSettings_TestModuleTemplateHeader" xml:space="preserve">
+    <value>Test Module Template</value>
   </data>
 </root>

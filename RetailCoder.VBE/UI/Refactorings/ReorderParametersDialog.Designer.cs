@@ -34,7 +34,7 @@ namespace Rubberduck.UI.Refactorings
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ReorderParametersDialog));
             this.MoveDownButton = new System.Windows.Forms.Button();
             this.flowLayoutPanel2 = new System.Windows.Forms.FlowLayoutPanel();
-            this.CancelButton = new System.Windows.Forms.Button();
+            this.CancelDialogButton = new System.Windows.Forms.Button();
             this.OkButton = new System.Windows.Forms.Button();
             this.panel1 = new System.Windows.Forms.Panel();
             this.InstructionsLabel = new System.Windows.Forms.Label();
@@ -65,7 +65,7 @@ namespace Rubberduck.UI.Refactorings
             // flowLayoutPanel2
             // 
             this.flowLayoutPanel2.BackColor = System.Drawing.SystemColors.ControlDark;
-            this.flowLayoutPanel2.Controls.Add(this.CancelButton);
+            this.flowLayoutPanel2.Controls.Add(this.CancelDialogButton);
             this.flowLayoutPanel2.Controls.Add(this.OkButton);
             this.flowLayoutPanel2.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.flowLayoutPanel2.FlowDirection = System.Windows.Forms.FlowDirection.RightToLeft;
@@ -76,17 +76,17 @@ namespace Rubberduck.UI.Refactorings
             this.flowLayoutPanel2.Size = new System.Drawing.Size(536, 53);
             this.flowLayoutPanel2.TabIndex = 3;
             // 
-            // CancelButton
+            // CancelDialogButton
             // 
-            this.CancelButton.BackColor = System.Drawing.SystemColors.ButtonFace;
-            this.CancelButton.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.CancelButton.Location = new System.Drawing.Point(421, 14);
-            this.CancelButton.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.CancelButton.Name = "CancelButton";
-            this.CancelButton.Size = new System.Drawing.Size(100, 28);
-            this.CancelButton.TabIndex = 0;
-            this.CancelButton.Text = "Cancel";
-            this.CancelButton.UseVisualStyleBackColor = false;
+            this.CancelDialogButton.BackColor = System.Drawing.SystemColors.ButtonFace;
+            this.CancelDialogButton.DialogResult = System.Windows.Forms.DialogResult.Cancel;
+            this.CancelDialogButton.Location = new System.Drawing.Point(421, 14);
+            this.CancelDialogButton.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.CancelDialogButton.Name = "CancelDialogButton";
+            this.CancelDialogButton.Size = new System.Drawing.Size(100, 28);
+            this.CancelDialogButton.TabIndex = 0;
+            this.CancelDialogButton.Text = "Cancel";
+            this.CancelDialogButton.UseVisualStyleBackColor = false;
             // 
             // OkButton
             // 
@@ -99,7 +99,6 @@ namespace Rubberduck.UI.Refactorings
             this.OkButton.TabIndex = 1;
             this.OkButton.Text = "Ok";
             this.OkButton.UseVisualStyleBackColor = false;
-            this.OkButton.Click += new System.EventHandler(this.OkButtonClick);
             // 
             // panel1
             // 
@@ -179,6 +178,7 @@ namespace Rubberduck.UI.Refactorings
             this.AcceptButton = this.OkButton;
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.CancelButton = this.CancelDialogButton;
             this.ClientSize = new System.Drawing.Size(536, 338);
             this.Controls.Add(this.MethodParametersGrid);
             this.Controls.Add(this.panel1);
@@ -186,11 +186,12 @@ namespace Rubberduck.UI.Refactorings
             this.Controls.Add(this.MoveDownButton);
             this.Controls.Add(this.MoveUpButton);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
-            this.Icon = (System.Drawing.Icon)RubberduckUI.Ducky;
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "ReorderParametersDialog";
+            this.ShowInTaskbar = false;
             this.Text = "Rubberduck - Reorder Parameters";
             this.flowLayoutPanel2.ResumeLayout(false);
             this.panel1.ResumeLayout(false);
@@ -205,7 +206,7 @@ namespace Rubberduck.UI.Refactorings
         private Button MoveUpButton;
         private Button MoveDownButton;
         private FlowLayoutPanel flowLayoutPanel2;
-        private Button CancelButton;
+        private Button CancelDialogButton;
         private Button OkButton;
         private Panel panel1;
         private Label TitleLabel;

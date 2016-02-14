@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Antlr4.Runtime;
 using Rubberduck.Parsing.Grammar;
@@ -7,29 +6,41 @@ using Rubberduck.VBEditor;
 
 namespace Rubberduck.Inspections
 {
-    public class ParameterCanBeByValInspectionResult : CodeInspectionResultBase
+    public class ParameterCanBeByValInspectionResult : InspectionResultBase
     {
-        public ParameterCanBeByValInspectionResult(string inspection, CodeInspectionSeverity type,
-            ParserRuleContext context, QualifiedMemberName qualifiedName)
-            : base(inspection, type, qualifiedName.QualifiedModuleName, context)
-        {
-        }
+        private readonly IEnumerable<CodeInspectionQuickFix> _quickFixes;
 
-        public override IDictionary<string, Action> GetQuickFixes()
+        public ParameterCanBeByValInspectionResult(IInspection inspection, string result, ParserRuleContext context, QualifiedMemberName qualifiedName)
+            : base(inspection, qualifiedName.QualifiedModuleName, context)
         {
-            return new Dictionary<string, Action>
+            _quickFixes = new[]
             {
-                {RubberduckUI.Inspections_PassParamByValue, PassParameterByValue}
+                new PassParameterByValueQuickFix(Context, QualifiedSelection), 
             };
         }
 
-        private void PassParameterByValue()
-        {
-            var parameter = Context.GetText();
-            var newContent = string.Concat(Tokens.ByVal, " ", parameter.Replace(Tokens.ByRef, string.Empty).Trim());
-            var selection = QualifiedSelection.Selection;
+        public override IEnumerable<CodeInspectionQuickFix> QuickFixes { get { return _quickFixes; } }
 
-            var module = QualifiedName.Component.CodeModule;
+        public override string Description
+        {
+            get { return string.Format(InspectionsUI.ParameterCanBeByValInspectionResultFormat, Target.IdentifierName); }
+        }
+    }
+
+    public class PassParameterByValueQuickFix : CodeInspectionQuickFix
+    {
+        public PassParameterByValueQuickFix(ParserRuleContext context, QualifiedSelection selection)
+            : base(context, selection, RubberduckUI.Inspections_PassParamByValue)
+        {
+        }
+
+        public override void Fix()
+        {
+            var parameter = Context.Parent.GetText();
+            var newContent = string.Concat(Tokens.ByVal, " ", parameter.Replace(Tokens.ByRef, string.Empty).Trim());
+            var selection = Selection.Selection;
+
+            var module = Selection.QualifiedName.Component.CodeModule;
             var lines = module.get_Lines(selection.StartLine, selection.LineCount);
 
             var result = lines.Replace(parameter, newContent);
