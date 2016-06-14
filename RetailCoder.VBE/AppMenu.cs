@@ -1,11 +1,13 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Rubberduck.Parsing.VBA;
 using Rubberduck.UI.Command.MenuItems;
 using Rubberduck.UI.Command.MenuItems.ParentMenus;
 
 namespace Rubberduck
 {
-    public class AppMenu : IAppMenu
+    public class AppMenu : IAppMenu, IDisposable
     {
         private readonly IEnumerable<IParentMenuItem> _menus;
 
@@ -35,6 +37,18 @@ namespace Rubberduck
             foreach (var menu in _menus)
             {
                 menu.Localize();
+            }
+        }
+
+        public void Dispose()
+        {
+            foreach (var menu in _menus)
+            {
+                menu.RemoveChildren();
+                if (menu.Item != null)
+                {
+                    menu.Item.Delete();
+                }
             }
         }
     }

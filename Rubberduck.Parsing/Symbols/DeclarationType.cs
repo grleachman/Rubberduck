@@ -7,8 +7,8 @@ namespace Rubberduck.Parsing.Symbols
     {
         Project = 1 << 0,
         Module = 1 << 1,
-        Class = 1 << 2,
-        Control = 1 << 3,
+        ProceduralModule = 1 << 2 | Module,
+        ClassModule = 1 << 3 | Module,
         UserForm = 1 << 4,
         Document = 1 << 5,
         ModuleOption = 1 << 6,
@@ -21,14 +21,15 @@ namespace Rubberduck.Parsing.Symbols
         PropertySet = 1 << 13 | Property | Procedure,
         Parameter = 1 << 14,
         Variable = 1 << 15,
-        Constant = 1 << 16,
-        Enumeration = 1 << 17,
-        EnumerationMember = 1 << 18 | Constant,
-        Event = 1 << 19,
-        UserDefinedType = 1 << 20,
-        UserDefinedTypeMember = 1 << 21 | Variable,
-        LibraryFunction = 1 << 22 | Function,
-        LibraryProcedure = 1 << 23 | Procedure,
-        LineLabel = 1 << 24
+        Control = 1 << 16 | Variable,
+        Constant = 1 << 17,
+        Enumeration = 1 << 18,
+        EnumerationMember = 1 << 19,
+        Event = 1 << 20,
+        UserDefinedType = 1 << 21,
+        UserDefinedTypeMember = 1 << 22,
+        LibraryFunction = 1 << 23 | Function,
+        LibraryProcedure = 1 << 24 | Procedure,
+        LineLabel = 1 << 25
     }
 }

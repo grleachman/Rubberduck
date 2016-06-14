@@ -24,6 +24,10 @@ namespace Rubberduck.Parsing.VBA
         /// </summary>
         Resolving,
         /// <summary>
+        /// Resolving identifier references.
+        /// </summary>
+        ResolvedDeclarations,
+        /// <summary>
         /// Parser state is in sync with the actual code in the VBE.
         /// </summary>
         Ready,
@@ -35,5 +39,9 @@ namespace Rubberduck.Parsing.VBA
         /// Parsing completed, but identifier references could not be resolved for one or more modules.
         /// </summary>
         ResolverError,
+        /// <summary>
+        /// This component doesn't need a state.  Use for built-in declarations.
+        /// </summary>
+        None,
     }
 }

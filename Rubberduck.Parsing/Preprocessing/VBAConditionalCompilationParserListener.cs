@@ -41,6 +41,105 @@ public interface IVBAConditionalCompilationParserListener : IParseTreeListener {
 	void ExitCcBlock([NotNull] VBAConditionalCompilationParser.CcBlockContext context);
 
 	/// <summary>
+	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.typeHint"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterTypeHint([NotNull] VBAConditionalCompilationParser.TypeHintContext context);
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="VBAConditionalCompilationParser.typeHint"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitTypeHint([NotNull] VBAConditionalCompilationParser.TypeHintContext context);
+
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.hashIf"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterHashIf([NotNull] VBAConditionalCompilationParser.HashIfContext context);
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="VBAConditionalCompilationParser.hashIf"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitHashIf([NotNull] VBAConditionalCompilationParser.HashIfContext context);
+
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.literal"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterLiteral([NotNull] VBAConditionalCompilationParser.LiteralContext context);
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="VBAConditionalCompilationParser.literal"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitLiteral([NotNull] VBAConditionalCompilationParser.LiteralContext context);
+
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.hashConst"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterHashConst([NotNull] VBAConditionalCompilationParser.HashConstContext context);
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="VBAConditionalCompilationParser.hashConst"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitHashConst([NotNull] VBAConditionalCompilationParser.HashConstContext context);
+
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.statementKeyword"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterStatementKeyword([NotNull] VBAConditionalCompilationParser.StatementKeywordContext context);
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="VBAConditionalCompilationParser.statementKeyword"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitStatementKeyword([NotNull] VBAConditionalCompilationParser.StatementKeywordContext context);
+
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.foreignName"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterForeignName([NotNull] VBAConditionalCompilationParser.ForeignNameContext context);
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="VBAConditionalCompilationParser.foreignName"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitForeignName([NotNull] VBAConditionalCompilationParser.ForeignNameContext context);
+
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.intrinsicFunctionName"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterIntrinsicFunctionName([NotNull] VBAConditionalCompilationParser.IntrinsicFunctionNameContext context);
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="VBAConditionalCompilationParser.intrinsicFunctionName"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitIntrinsicFunctionName([NotNull] VBAConditionalCompilationParser.IntrinsicFunctionNameContext context);
+
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.markerKeyword"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterMarkerKeyword([NotNull] VBAConditionalCompilationParser.MarkerKeywordContext context);
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="VBAConditionalCompilationParser.markerKeyword"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitMarkerKeyword([NotNull] VBAConditionalCompilationParser.MarkerKeywordContext context);
+
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.keyword"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterKeyword([NotNull] VBAConditionalCompilationParser.KeywordContext context);
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="VBAConditionalCompilationParser.keyword"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitKeyword([NotNull] VBAConditionalCompilationParser.KeywordContext context);
+
+	/// <summary>
 	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.ccEndIf"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
@@ -52,15 +151,15 @@ public interface IVBAConditionalCompilationParserListener : IParseTreeListener {
 	void ExitCcEndIf([NotNull] VBAConditionalCompilationParser.CcEndIfContext context);
 
 	/// <summary>
-	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.logicalLine"/>.
+	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.nameValue"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
-	void EnterLogicalLine([NotNull] VBAConditionalCompilationParser.LogicalLineContext context);
+	void EnterNameValue([NotNull] VBAConditionalCompilationParser.NameValueContext context);
 	/// <summary>
-	/// Exit a parse tree produced by <see cref="VBAConditionalCompilationParser.logicalLine"/>.
+	/// Exit a parse tree produced by <see cref="VBAConditionalCompilationParser.nameValue"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
-	void ExitLogicalLine([NotNull] VBAConditionalCompilationParser.LogicalLineContext context);
+	void ExitNameValue([NotNull] VBAConditionalCompilationParser.NameValueContext context);
 
 	/// <summary>
 	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.ccEol"/>.
@@ -96,6 +195,39 @@ public interface IVBAConditionalCompilationParserListener : IParseTreeListener {
 	void ExitIntrinsicFunction([NotNull] VBAConditionalCompilationParser.IntrinsicFunctionContext context);
 
 	/// <summary>
+	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.foreignIdentifier"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterForeignIdentifier([NotNull] VBAConditionalCompilationParser.ForeignIdentifierContext context);
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="VBAConditionalCompilationParser.foreignIdentifier"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitForeignIdentifier([NotNull] VBAConditionalCompilationParser.ForeignIdentifierContext context);
+
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.hashElse"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterHashElse([NotNull] VBAConditionalCompilationParser.HashElseContext context);
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="VBAConditionalCompilationParser.hashElse"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitHashElse([NotNull] VBAConditionalCompilationParser.HashElseContext context);
+
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.hashEndIf"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterHashEndIf([NotNull] VBAConditionalCompilationParser.HashEndIfContext context);
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="VBAConditionalCompilationParser.hashEndIf"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitHashEndIf([NotNull] VBAConditionalCompilationParser.HashEndIfContext context);
+
+	/// <summary>
 	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.ccExpression"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
@@ -116,39 +248,6 @@ public interface IVBAConditionalCompilationParserListener : IParseTreeListener {
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	void ExitCcElseIfBlock([NotNull] VBAConditionalCompilationParser.CcElseIfBlockContext context);
-
-	/// <summary>
-	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.typeHint"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void EnterTypeHint([NotNull] VBAConditionalCompilationParser.TypeHintContext context);
-	/// <summary>
-	/// Exit a parse tree produced by <see cref="VBAConditionalCompilationParser.typeHint"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void ExitTypeHint([NotNull] VBAConditionalCompilationParser.TypeHintContext context);
-
-	/// <summary>
-	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.extendedLine"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void EnterExtendedLine([NotNull] VBAConditionalCompilationParser.ExtendedLineContext context);
-	/// <summary>
-	/// Exit a parse tree produced by <see cref="VBAConditionalCompilationParser.extendedLine"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void ExitExtendedLine([NotNull] VBAConditionalCompilationParser.ExtendedLineContext context);
-
-	/// <summary>
-	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.literal"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void EnterLiteral([NotNull] VBAConditionalCompilationParser.LiteralContext context);
-	/// <summary>
-	/// Exit a parse tree produced by <see cref="VBAConditionalCompilationParser.literal"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void ExitLiteral([NotNull] VBAConditionalCompilationParser.LiteralContext context);
 
 	/// <summary>
 	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.compilationUnit"/>.
@@ -217,17 +316,6 @@ public interface IVBAConditionalCompilationParserListener : IParseTreeListener {
 	void ExitCcVarLhs([NotNull] VBAConditionalCompilationParser.CcVarLhsContext context);
 
 	/// <summary>
-	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.intrinsicFunctionName"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void EnterIntrinsicFunctionName([NotNull] VBAConditionalCompilationParser.IntrinsicFunctionNameContext context);
-	/// <summary>
-	/// Exit a parse tree produced by <see cref="VBAConditionalCompilationParser.intrinsicFunctionName"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void ExitIntrinsicFunctionName([NotNull] VBAConditionalCompilationParser.IntrinsicFunctionNameContext context);
-
-	/// <summary>
 	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.ccElse"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
@@ -237,6 +325,39 @@ public interface IVBAConditionalCompilationParserListener : IParseTreeListener {
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	void ExitCcElse([NotNull] VBAConditionalCompilationParser.CcElseContext context);
+
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.comment"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterComment([NotNull] VBAConditionalCompilationParser.CommentContext context);
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="VBAConditionalCompilationParser.comment"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitComment([NotNull] VBAConditionalCompilationParser.CommentContext context);
+
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.hashElseIf"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterHashElseIf([NotNull] VBAConditionalCompilationParser.HashElseIfContext context);
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="VBAConditionalCompilationParser.hashElseIf"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitHashElseIf([NotNull] VBAConditionalCompilationParser.HashElseIfContext context);
+
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.physicalLine"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterPhysicalLine([NotNull] VBAConditionalCompilationParser.PhysicalLineContext context);
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="VBAConditionalCompilationParser.physicalLine"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitPhysicalLine([NotNull] VBAConditionalCompilationParser.PhysicalLineContext context);
 
 	/// <summary>
 	/// Enter a parse tree produced by <see cref="VBAConditionalCompilationParser.ccConst"/>.

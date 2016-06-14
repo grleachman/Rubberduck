@@ -24,8 +24,8 @@ namespace Rubberduck.Inspections
         {
             var declarations = UserDeclarations.ToList();
 
-            var classes = declarations.Where(item => item.DeclarationType == DeclarationType.Class).ToList();
-            var modules = declarations.Where(item => item.DeclarationType == DeclarationType.Module).ToList();
+            var classes = declarations.Where(item => item.DeclarationType == DeclarationType.ClassModule).ToList();
+            var modules = declarations.Where(item => item.DeclarationType == DeclarationType.ProceduralModule).ToList();
 
             var handlers = declarations.Where(item => item.DeclarationType == DeclarationType.Control)
                 .SelectMany(control => declarations.FindEventHandlers(control)).ToList();
@@ -33,7 +33,7 @@ namespace Rubberduck.Inspections
             var withEventFields = declarations.Where(item => item.DeclarationType == DeclarationType.Variable && item.IsWithEvents);
             handlers.AddRange(withEventFields.SelectMany(field => declarations.FindEventProcedures(field)));
 
-            var forms = declarations.Where(item => item.DeclarationType == DeclarationType.Class
+            var forms = declarations.Where(item => item.DeclarationType == DeclarationType.ClassModule
                         && item.QualifiedName.QualifiedModuleName.Component.Type == vbext_ComponentType.vbext_ct_MSForm)
                 .ToList();
 
@@ -41,6 +41,8 @@ namespace Rubberduck.Inspections
             {
                 handlers.AddRange(forms.SelectMany(form => declarations.FindFormEventHandlers(form)));
             }
+
+            handlers.AddRange(State.AllDeclarations.FindBuiltInEventHandlers());
 
             var items = declarations
                 .Where(item => !IsIgnoredDeclaration(declarations, item, handlers, classes, modules)
@@ -89,6 +91,7 @@ namespace Rubberduck.Inspections
             return parent != null;
         }
 
+        // TODO: Put this into grammar?
         private static readonly string[] ClassLifeCycleHandlers =
         {
             "Class_Initialize",
@@ -127,7 +130,7 @@ namespace Rubberduck.Inspections
             }
 
             var interfaces = enumerable.Where(item => item.References.Any(reference =>
-                    reference.Context.Parent is VBAParser.ImplementsStmtContext));
+                    ParserRuleContextHelper.HasParent<VBAParser.ImplementsStmtContext>(reference.Context.Parent)));
 
             if (interfaces.Select(i => i.ComponentName).Contains(procedure.ComponentName))
             {
@@ -143,7 +146,7 @@ namespace Rubberduck.Inspections
         private IEnumerable<string> GetImplementedInterfaceMembers(IEnumerable<Declaration> declarations, IEnumerable<Declaration> classes, string componentName)
         {
             var interfaces = classes.Where(item => item.References.Any(reference =>
-                    reference.Context.Parent is VBAParser.ImplementsStmtContext
+                    ParserRuleContextHelper.HasParent<VBAParser.ImplementsStmtContext>(reference.Context.Parent)
                     && reference.QualifiedModuleName.Component.Name == componentName));
 
             var members = interfaces.SelectMany(declarations.InScope)

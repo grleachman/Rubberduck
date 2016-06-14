@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Antlr4.Runtime;
@@ -9,34 +8,26 @@ using Microsoft.Vbe.Interop;
 using Antlr4.Runtime.Tree;
 using Rubberduck.Parsing.Symbols;
 using Rubberduck.VBEditor;
-using System.Globalization;
 using Rubberduck.Parsing.Preprocessing;
 using System.Diagnostics;
+using Rubberduck.Parsing.Annotations;
 using Rubberduck.Parsing.Grammar;
-using Rubberduck.Parsing.Nodes;
 using Rubberduck.VBEditor.Extensions;
+using System.IO;
+using NLog;
+// ReSharper disable LoopCanBeConvertedToQuery
 
 namespace Rubberduck.Parsing.VBA
 {
     public class RubberduckParser : IRubberduckParser
     {
-        public RubberduckParserState State
-        {
-            get
-            {
-                return _state;
-            }
-        }
+        public RubberduckParserState State { get { return _state; } }
 
         private CancellationTokenSource _central = new CancellationTokenSource();
         private CancellationTokenSource _resolverTokenSource; // linked to _central later
-        private readonly ConcurrentDictionary<VBComponent, Tuple<Task, CancellationTokenSource>> _currentTasks = 
+        private readonly ConcurrentDictionary<VBComponent, Tuple<Task, CancellationTokenSource>> _currentTasks =
             new ConcurrentDictionary<VBComponent, Tuple<Task, CancellationTokenSource>>();
 
-        private readonly Dictionary<VBComponent, IParseTree> _parseTrees = new Dictionary<VBComponent, IParseTree>();
-        private readonly Dictionary<QualifiedModuleName, Dictionary<Declaration, byte>> _declarations = new Dictionary<QualifiedModuleName, Dictionary<Declaration, byte>>();
-        private readonly Dictionary<VBComponent, ITokenStream> _tokenStreams = new Dictionary<VBComponent, ITokenStream>();
-        private readonly Dictionary<VBComponent, IList<CommentNode>> _comments = new Dictionary<VBComponent, IList<CommentNode>>();
         private readonly IDictionary<VBComponent, IDictionary<Tuple<string, DeclarationType>, Attributes>> _componentAttributes
             = new Dictionary<VBComponent, IDictionary<Tuple<string, DeclarationType>, Attributes>>();
 
@@ -46,61 +37,73 @@ namespace Rubberduck.Parsing.VBA
         private readonly VBE _vbe;
         private readonly RubberduckParserState _state;
         private readonly IAttributeParser _attributeParser;
+        private readonly Func<IVBAPreprocessor> _preprocessorFactory;
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
-        public RubberduckParser(VBE vbe, RubberduckParserState state, IAttributeParser attributeParser)
+        public RubberduckParser(
+            VBE vbe,
+            RubberduckParserState state,
+            IAttributeParser attributeParser,
+            Func<IVBAPreprocessor> preprocessorFactory)
         {
             _resolverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_central.Token);
             _vbe = vbe;
             _state = state;
             _attributeParser = attributeParser;
+            _preprocessorFactory = preprocessorFactory;
 
-            _comReflector = new ReferencedDeclarationsCollector();
+            _comReflector = new ReferencedDeclarationsCollector(_state);
 
             state.ParseRequest += ReparseRequested;
-            state.StateChanged += StateOnStateChanged;
         }
 
-        private void StateOnStateChanged(object sender, EventArgs e)
-        {
-            Debug.WriteLine("RubberduckParser handles OnStateChanged ({0})", _state.Status);
-
-            if (_state.Status == ParserState.Parsed)
-            {
-                Debug.WriteLine("(handling OnStateChanged) Starting resolver task");
-                Resolve(_central.Token); // Tests expect this to be synchronous
-            }
-        }
 
         private void ReparseRequested(object sender, ParseRequestEventArgs e)
         {
             if (e.IsFullReparseRequest)
             {
                 Cancel();
-                ParseAll();
+                Task.Run(() => ParseAll());
             }
             else
             {
                 Cancel(e.Component);
-                ParseAsync(e.Component, CancellationToken.None);
+                Task.Run(() =>
+                {
+                    ParseAsync(e.Component, CancellationToken.None).Wait();
+
+                    if (_state.Status != ParserState.Error)
+                    {
+                        Logger.Trace("Starting resolver task");
+                        Resolve(_central.Token);
+                    }
+                });
             }
         }
 
+        /// <summary>
+        /// For the use of tests only
+        /// </summary>
         public void Parse()
         {
-            if (!_state.Projects.Any())
+            if (_state.Projects.Count == 0)
             {
-                foreach (var project in _vbe.VBProjects.Cast<VBProject>())
+                foreach (var project in _vbe.VBProjects.UnprotectedProjects())
                 {
                     _state.AddProject(project);
                 }
             }
 
-            var projects = _state.Projects
-                .Where(project => project.Protection == vbext_ProjectProtection.vbext_pp_none)
-                .ToList();
+            var components = new List<VBComponent>();
+            foreach (var project in _state.Projects)
+            {
+                foreach (VBComponent component in project.VBComponents)
+                {
+                    components.Add(component);
+                }
+            }
 
-            var components = projects.SelectMany(p => p.VBComponents.Cast<VBComponent>()).ToList();
-            SyncComReferences(projects);
+            SyncComReferences(_state.Projects);
 
             foreach (var component in components)
             {
@@ -108,17 +111,26 @@ namespace Rubberduck.Parsing.VBA
             }
 
             // invalidation cleanup should go into ParseAsync?
-            foreach (var invalidated in _componentAttributes.Keys.Except(components))
+            foreach (var key in _componentAttributes.Keys)
             {
-                _componentAttributes.Remove(invalidated);
+                if (!components.Contains(key))
+                {
+                    _componentAttributes.Remove(key);
+                }
             }
 
-            foreach (var vbComponent in components)
+            var parseTasks = new Task[components.Count];
+            for (var i = 0; i < components.Count; i++)
             {
-                while (!_state.ClearDeclarations(vbComponent)) { }
-                
-                // expects synchronous parse :/
-                ParseComponent(vbComponent);
+                parseTasks[i] = ParseAsync(components[i], CancellationToken.None);
+            }
+
+            Task.WaitAll(parseTasks);
+
+            if (_state.Status != ParserState.Error)
+            {
+                Logger.Trace("Starting resolver task");
+                Resolve(_central.Token); // Tests expect this to be synchronous
             }
         }
 
@@ -127,59 +139,172 @@ namespace Rubberduck.Parsing.VBA
         /// </summary>
         private void ParseAll()
         {
-            var projects = _state.Projects
-                // accessing the code of a protected VBComponent throws a COMException:
-                .Where(project => project.Protection == vbext_ProjectProtection.vbext_pp_none)
-                .ToList();
-
-            var components = projects.SelectMany(p => p.VBComponents.Cast<VBComponent>()).ToList();
-            var modified = components.Where(_state.IsModified).ToList();
-            var unchanged = components.Where(c => !_state.IsModified(c)).ToList();
-
-            SyncComReferences(projects);
-
-            if (!modified.Any())
+            if (_state.Projects.Count == 0)
             {
+                foreach (var project in _vbe.VBProjects.UnprotectedProjects())
+                {
+                    _state.AddProject(project);
+                }
+            }
+
+            var components = new List<VBComponent>();
+            foreach (var project in _state.Projects)
+            {
+                foreach (VBComponent component in project.VBComponents)
+                {
+                    components.Add(component);
+                }
+            }
+
+            var toParse = new List<VBComponent>();
+            var unchanged = new List<VBComponent>();
+
+            foreach (var component in components)
+            {
+                if (_state.IsNewOrModified(component))
+                {
+                    toParse.Add(component);
+                }
+                else
+                {
+                    unchanged.Add(component);
+                }
+            }
+
+            SyncComReferences(_state.Projects);
+            AddBuiltInDeclarations(_state.Projects);
+
+            if (toParse.Count == 0)
+            {
+                State.SetStatusAndFireStateChanged(_state.Status);
                 return;
             }
 
-            foreach (var component in modified)
+
+            lock (_state)  // note, method is invoked from UI thread... really need the lock here?
             {
-                _state.SetModuleState(component, ParserState.Pending);
-            }
-            foreach (var component in unchanged)
-            {
-                _state.SetModuleState(component, ParserState.Parsed);
+                foreach (var component in toParse)
+                {
+                    _state.SetModuleState(component, ParserState.Pending);
+                }
+                foreach (var component in unchanged)
+                {
+                    // note: seting to 'Parsed' would include them in the resolver walk. 'Ready' excludes them.
+                    _state.SetModuleState(component, ParserState.Ready);
+                }
+
+                //Debug.Assert(unchanged.All(component => _state.GetModuleState(component) == ParserState.Ready));
+                //Debug.Assert(toParse.All(component => _state.GetModuleState(component) == ParserState.Pending));
             }
 
             // invalidation cleanup should go into ParseAsync?
-            foreach (var invalidated in _componentAttributes.Keys.Except(components))
+            foreach (var key in _componentAttributes.Keys)
             {
-                _componentAttributes.Remove(invalidated);
+                if (!components.Contains(key))
+                {
+                    _componentAttributes.Remove(key);
+                }
             }
 
-            foreach (var vbComponent in modified)
+            var parseTasks = new Task[components.Count];
+            for (var i = 0; i < components.Count; i++)
             {
-                ParseAsync(vbComponent, CancellationToken.None);
+                parseTasks[i] = ParseAsync(components[i], CancellationToken.None);
+            }
+
+            Task.WaitAll(parseTasks);
+
+            if (_state.Status != ParserState.Error)
+            {
+                Logger.Trace("Starting resolver task");
+                Resolve(_central.Token);
             }
         }
 
-        private readonly HashSet<ReferencePriorityMap> _references = new HashSet<ReferencePriorityMap>();
+        private void AddBuiltInDeclarations(IReadOnlyList<VBProject> projects)
+        {
+            var finder = new DeclarationFinder(_state.AllDeclarations, new CommentNode[] { }, new IAnnotation[] { });
+
+            foreach (var item in finder.MatchName(Tokens.Err))
+            {
+                if (item.IsBuiltIn && item.DeclarationType == DeclarationType.Variable &&
+                    item.Accessibility == Accessibility.Global)
+                {
+                    return;
+                }
+            }
+
+            var vba = finder.FindProject("VBA");
+            if (vba == null)
+            {
+                // if VBA project is null, we haven't loaded any COM references;
+                // we're in a unit test and mock project didn't setup any references.
+                return;
+            }
+            var informationModule = finder.FindStdModule("Information", vba, true);
+            Debug.Assert(informationModule != null, "We expect the information module to exist in the VBA project.");
+            var customDeclarations = CustomDeclarations.Load(vba, informationModule);
+            lock (_state)
+            {
+                foreach (var customDeclaration in customDeclarations)
+                {
+                    _state.AddDeclaration(customDeclaration);
+                }
+            }
+        }
+
+        private readonly HashSet<ReferencePriorityMap> _projectReferences = new HashSet<ReferencePriorityMap>();
+
+        private string GetReferenceProjectId(Reference reference, IReadOnlyList<VBProject> projects)
+        {
+            VBProject project = null;
+            foreach (var item in projects)
+            {
+                try
+                {
+                    if (item.FileName == reference.FullPath)
+                    {
+                        project = item;
+                    }
+                }
+                catch (IOException)
+                {
+                    // Filename throws exception if unsaved.
+                }
+            }
+            
+            if (project != null)
+            {
+                return QualifiedModuleName.GetProjectId(project);
+            }
+            return QualifiedModuleName.GetProjectId(reference);
+        }
 
         private void SyncComReferences(IReadOnlyList<VBProject> projects)
         {
             foreach (var vbProject in projects)
             {
                 var projectId = QualifiedModuleName.GetProjectId(vbProject);
+                // use a 'for' loop to store the order of references as a 'priority'.
+                // reference resolver needs this to know which declaration to prioritize when a global identifier exists in multiple libraries.
                 for (var priority = 1; priority <= vbProject.References.Count; priority++)
                 {
                     var reference = vbProject.References.Item(priority);
-                    var referencedProjectId = QualifiedModuleName.GetProjectId(reference);
-                    var map = _references.SingleOrDefault(r => r.ReferencedProjectId == referencedProjectId);
+                    var referencedProjectId = GetReferenceProjectId(reference, projects);
+
+                    ReferencePriorityMap map = null;
+                    foreach (var item in _projectReferences)
+                    {
+                        if (item.ReferencedProjectId == referencedProjectId)
+                        {
+                            map = map != null ? null : item;
+                        }
+                    }
+
                     if (map == null)
                     {
-                        map = new ReferencePriorityMap(referencedProjectId) {{projectId, priority}};
-                        _references.Add(map);
+                        map = new ReferencePriorityMap(referencedProjectId) { { projectId, priority } };
+                        _projectReferences.Add(map);
                     }
                     else
                     {
@@ -189,7 +314,7 @@ namespace Rubberduck.Parsing.VBA
                     if (!map.IsLoaded)
                     {
                         _state.OnStatusMessageUpdate(ParserState.LoadingReference.ToString());
-                        var items = _comReflector.GetDeclarationsForReference(reference).ToList();
+                        var items = _comReflector.GetDeclarationsForReference(reference);
                         foreach (var declaration in items)
                         {
                             _state.AddDeclaration(declaration);
@@ -199,19 +324,43 @@ namespace Rubberduck.Parsing.VBA
                 }
             }
 
-            var mappedIds = _references.Select(map => map.ReferencedProjectId);
-            var unmapped = projects.SelectMany(project => project.References.Cast<Reference>())
-                .Where(reference => !mappedIds.Contains(QualifiedModuleName.GetProjectId(reference)));
+            var mappedIds = new List<string>();
+            foreach (var item in _projectReferences)
+            {
+                mappedIds.Add(item.ReferencedProjectId);
+            }
+
+            var unmapped = new List<Reference>();
+            foreach (var project in projects)
+            {
+                foreach (Reference item in project.References)
+                {
+                    if (!mappedIds.Contains(GetReferenceProjectId(item, projects)))
+                    {
+                        unmapped.Add(item);
+                    }
+                }
+            }
+
             foreach (var reference in unmapped)
             {
-                UnloadComReference(reference);
+                UnloadComReference(reference, projects);
             }
         }
 
-        private void UnloadComReference(Reference reference)
+        private void UnloadComReference(Reference reference, IReadOnlyList<VBProject> projects)
         {
-            var referencedProjectId = QualifiedModuleName.GetProjectId(reference);
-            var map = _references.SingleOrDefault(r => r.ReferencedProjectId == referencedProjectId);
+            var referencedProjectId = GetReferenceProjectId(reference, projects);
+
+            ReferencePriorityMap map = null;
+            foreach (var item in _projectReferences)
+            {
+                if (item.ReferencedProjectId == referencedProjectId)
+                {
+                    map = map != null ? null : item;
+                }
+            }
+            
             if (map == null || !map.IsLoaded)
             {
                 // we're removing a reference we weren't tracking? ...this shouldn't happen.
@@ -219,88 +368,101 @@ namespace Rubberduck.Parsing.VBA
                 return;
             }
             map.Remove(referencedProjectId);
-            if (!map.Any())
+            if (map.Count == 0)
             {
-                _references.Remove(map);
+                _projectReferences.Remove(map);
                 _state.RemoveBuiltInDeclarations(reference);
             }
         }
 
         public Task ParseAsync(VBComponent component, CancellationToken token, TokenStreamRewriter rewriter = null)
         {
-            _state.ClearDeclarations(component);            
-            _state.SetModuleState(component, ParserState.Pending); // also clears module-exceptions
+            lock (_state)
+                lock (component)
+                {
+                    _state.ClearStateCache(component);
+                    _state.SetModuleState(component, ParserState.Pending); // also clears module-exceptions
+                }
 
             var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_central.Token, token);
 
-            //var taskFactory = new TaskFactory(new StaTaskScheduler());
             var task = new Task(() => ParseAsyncInternal(component, linkedTokenSource.Token, rewriter));
             _currentTasks.TryAdd(component, Tuple.Create(task, linkedTokenSource));
 
             Tuple<Task, CancellationTokenSource> removedTask;
             task.ContinueWith(t => _currentTasks.TryRemove(component, out removedTask)); // default also executes on cancel
-
-            task.Start(/*taskFactory.Scheduler*/);
+            // See http://stackoverflow.com/questions/6800705/why-is-taskscheduler-current-the-default-taskscheduler
+            task.Start(TaskScheduler.Default);
             return task;
         }
 
         public void Cancel(VBComponent component = null)
         {
             lock (_central)
-            lock (_resolverTokenSource)
-            {
-                if (component == null)
+                lock (_resolverTokenSource)
                 {
-                    _central.Cancel(false);
-
-                    _central.Dispose();
-                    _central = new CancellationTokenSource();
-                    _resolverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_central.Token);
-                }
-                else
-                {
-                    _resolverTokenSource.Cancel(false);
-                    _resolverTokenSource.Dispose();
-
-                    _resolverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_central.Token);
-                    Tuple<Task, CancellationTokenSource> result;
-                    if (_currentTasks.TryGetValue(component, out result))
+                    if (component == null)
                     {
-                        result.Item2.Cancel(false);
-                        result.Item2.Dispose();
+                        _central.Cancel(false);
+
+                        _central.Dispose();
+                        _central = new CancellationTokenSource();
+                        _resolverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_central.Token);
+                    }
+                    else
+                    {
+                        _resolverTokenSource.Cancel(false);
+                        _resolverTokenSource.Dispose();
+
+                        _resolverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_central.Token);
+                        Tuple<Task, CancellationTokenSource> result;
+                        if (_currentTasks.TryGetValue(component, out result))
+                        {
+                            result.Item2.Cancel(false);
+                            result.Item2.Dispose();
+                        }
                     }
                 }
-            }
         }
 
         private void ParseAsyncInternal(VBComponent component, CancellationToken token, TokenStreamRewriter rewriter = null)
         {
-            var preprocessor = new VBAPreprocessor(double.Parse(_vbe.Version, CultureInfo.InvariantCulture));
+            var preprocessor = _preprocessorFactory();
             var parser = new ComponentParseTask(component, preprocessor, _attributeParser, rewriter);
-            parser.ParseFailure += (sender, e) => _state.SetModuleState(component, ParserState.Error, e.Cause as SyntaxErrorException);
+            parser.ParseFailure += (sender, e) =>
+            {
+                lock (_state)
+                    lock (component)
+                    {
+                        _state.SetModuleState(component, ParserState.Error, e.Cause as SyntaxErrorException);
+                    }
+            };
             parser.ParseCompleted += (sender, e) =>
             {
-                // possibly lock _state
-                _state.SetModuleAttributes(component, e.Attributes);
-                _state.AddParseTree(component, e.ParseTree);
-                _state.AddTokenStream(component, e.Tokens);
-                _state.SetModuleComments(component, e.Comments);
-                _state.SetModuleAnnotations(component, e.Annotations);
+                lock (_state)
+                    lock (component)
+                    {
+                        _state.SetModuleAttributes(component, e.Attributes);
+                        _state.AddParseTree(component, e.ParseTree);
+                        _state.AddTokenStream(component, e.Tokens);
+                        _state.SetModuleComments(component, e.Comments);
+                        _state.SetModuleAnnotations(component, e.Annotations);
 
-                // This really needs to go last
-                _state.SetModuleState(component, ParserState.Parsed);
+                        // This really needs to go last
+                        _state.SetModuleState(component, ParserState.Parsed);
+                    }
             };
-            _state.SetModuleState(component, ParserState.Parsing);
+            lock (_state)
+                lock (component)
+                {
+                    _state.SetModuleState(component, ParserState.Parsing);
+                }
             parser.Start(token);
-        }
-
-        private void ParseComponent(VBComponent component, TokenStreamRewriter rewriter = null)
-        {
-            ParseAsync(component, CancellationToken.None, rewriter).Wait();
         }
 
         private void Resolve(CancellationToken token)
         {
+            State.SetStatusAndFireStateChanged(ParserState.Resolving);
             var sharedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_resolverTokenSource.Token, token);
             // tests expect this to be synchronous :/
             //Task.Run(() => ResolveInternal(sharedTokenSource.Token));
@@ -309,38 +471,47 @@ namespace Rubberduck.Parsing.VBA
 
         private void ResolveInternal(CancellationToken token)
         {
-            var components = _state.Projects
-                .Where(project => project.Protection == vbext_ProjectProtection.vbext_pp_none)
-                .SelectMany(p => p.VBComponents.Cast<VBComponent>()).ToList();
+            var components = new List<VBComponent>();
+            foreach (var project in _state.Projects)
+            {
+                if (project.Protection == vbext_ProjectProtection.vbext_pp_locked)
+                {
+                    continue;
+                }
+
+                foreach (VBComponent component in project.VBComponents)
+                {
+                    components.Add(component);
+                }
+            }
+
             if (!_state.HasAllParseTrees(components))
             {
                 return;
             }
-
+            _projectDeclarations.Clear();
+            _state.ClearBuiltInReferences();
             foreach (var kvp in _state.ParseTrees)
             {
                 var qualifiedName = kvp.Key;
-                if (true /*_state.IsModified(qualifiedName)*/)
-                {
-                    Debug.WriteLine("Module '{0}' {1}", qualifiedName.ComponentName, _state.IsModified(qualifiedName) ? "was modified" : "was NOT modified");
-                    // modified module; walk parse tree and re-acquire all declarations
-                    if (token.IsCancellationRequested) return;
-                    ResolveDeclarations(qualifiedName.Component, kvp.Value);
-                }
-                else
-                {
-                    Debug.WriteLine(string.Format("Module '{0}' was not modified since last parse. Clearing identifier references...", kvp.Key.ComponentName));
-                    // clear identifier references for non-modified modules
-                    var declarations = _state.AllUserDeclarations.Where(item => item.QualifiedName.QualifiedModuleName.Equals(qualifiedName));
-                    foreach (var declaration in declarations)
-                    {
-                        declaration.ClearReferences();
-                    }
-                }
+                Logger.Debug("Module '{0}' {1}", qualifiedName.ComponentName, _state.IsNewOrModified(qualifiedName) ? "was modified" : "was NOT modified");
+                // modified module; walk parse tree and re-acquire all declarations
+                if (token.IsCancellationRequested) return;
+                ResolveDeclarations(qualifiedName.Component, kvp.Value);
             }
+
+            _state.SetStatusAndFireStateChanged(ParserState.ResolvedDeclarations);
 
             // walk all parse trees (modified or not) for identifier references
             var finder = new DeclarationFinder(_state.AllDeclarations, _state.AllComments, _state.AllAnnotations);
+            var passes = new List<ICompilationPass>
+            {
+                // This pass has to come first because the type binding resolution depends on it.
+                new ProjectReferencePass(finder),
+                new TypeHierarchyPass(finder, new VBAExpressionParser()),
+                new TypeAnnotationPass(finder, new VBAExpressionParser())
+            };
+            passes.ForEach(p => p.Execute());
             foreach (var kvp in _state.ParseTrees)
             {
                 if (token.IsCancellationRequested) return;
@@ -348,46 +519,68 @@ namespace Rubberduck.Parsing.VBA
             }
         }
 
+        private readonly Dictionary<string, Declaration> _projectDeclarations = new Dictionary<string, Declaration>();
         private void ResolveDeclarations(VBComponent component, IParseTree tree)
         {
+            if (component == null) { return; }
+
             var qualifiedModuleName = new QualifiedModuleName(component);
 
-            var obsoleteCallStatementListener = new ObsoleteCallStatementListener();
-            var obsoleteLetStatementListener = new ObsoleteLetStatementListener();
-            var emptyStringLiteralListener = new EmptyStringLiteralListener();
-            var argListWithOneByRefParamListener = new ArgListWithOneByRefParamListener();
-            
             try
             {
-                ParseTreeWalker.Default.Walk(new CombinedParseTreeListener(new IParseTreeListener[]{
-                    obsoleteCallStatementListener,
-                    obsoleteLetStatementListener,
-                    emptyStringLiteralListener,
-                    argListWithOneByRefParamListener,
-                }), tree);
-                // TODO: these are actually (almost) isnpection results.. we should handle them as such
-                _state.ArgListsWithOneByRefParam = argListWithOneByRefParamListener.Contexts.Select(context => new QualifiedContext(qualifiedModuleName, context));
-                _state.EmptyStringLiterals = emptyStringLiteralListener.Contexts.Select(context => new QualifiedContext(qualifiedModuleName, context));
-                _state.ObsoleteLetContexts = obsoleteLetStatementListener.Contexts.Select(context => new QualifiedContext(qualifiedModuleName, context));
-                _state.ObsoleteCallContexts = obsoleteCallStatementListener.Contexts.Select(context => new QualifiedContext(qualifiedModuleName, context));
-
-                // cannot locate declarations in one pass *the way it's currently implemented*,
-                // because the context in EnterSubStmt() doesn't *yet* have child nodes when the context enters.
-                // so we need to EnterAmbiguousIdentifier() and evaluate the parent instead - this *might* work.
-                var declarationsListener = new DeclarationSymbolsListener(qualifiedModuleName, Accessibility.Implicit, component.Type, _state.GetModuleComments(component), _state.GetModuleAnnotations(component),_state.GetModuleAttributes(component), _references);
-                // TODO: should we unify the API? consider working like the other listeners instead of event-based
-                declarationsListener.NewDeclaration += (sender, e) => _state.AddDeclaration(e.Declaration);
-                declarationsListener.CreateModuleDeclarations();
-                // rewalk parse tree for second declaration level
+                var project = component.Collection.Parent;
+                var projectQualifiedName = new QualifiedModuleName(project);
+                Declaration projectDeclaration;
+                if (!_projectDeclarations.TryGetValue(projectQualifiedName.ProjectId, out projectDeclaration))
+                {
+                    projectDeclaration = CreateProjectDeclaration(projectQualifiedName, project);
+                    _projectDeclarations.Add(projectQualifiedName.ProjectId, projectDeclaration);
+                    lock (_state)
+                    {
+                        _state.AddDeclaration(projectDeclaration);
+                    }
+                }
+                Logger.Debug("Creating declarations for module {0}.", qualifiedModuleName.Name);
+                var declarationsListener = new DeclarationSymbolsListener(qualifiedModuleName, component.Type, _state.GetModuleComments(component), _state.GetModuleAnnotations(component), _state.GetModuleAttributes(component), _projectReferences, projectDeclaration);
                 ParseTreeWalker.Default.Walk(declarationsListener, tree);
-            } catch (Exception exception)
+                foreach (var createdDeclaration in declarationsListener.CreatedDeclarations)
+                {
+                    _state.AddDeclaration(createdDeclaration);
+                }
+            }
+            catch (Exception exception)
             {
-                Debug.Print("Exception thrown resolving '{0}' (thread {2}): {1}", component.Name, exception, Thread.CurrentThread.ManagedThreadId);
-                _state.SetModuleState(component, ParserState.ResolverError);
+                Logger.Error(exception, "Exception thrown acquiring declarations for '{0}' (thread {1}).", component.Name, Thread.CurrentThread.ManagedThreadId);
+                lock (_state)
+                {
+                    _state.SetModuleState(component, ParserState.ResolverError);
+                }
+            }
+        }
+
+        private Declaration CreateProjectDeclaration(QualifiedModuleName projectQualifiedName, VBProject project)
+        {
+            var qualifiedName = projectQualifiedName.QualifyMemberName(project.Name);
+            var projectId = qualifiedName.QualifiedModuleName.ProjectId;
+            var projectDeclaration = new ProjectDeclaration(qualifiedName, project.Name, isBuiltIn: false);
+
+            var references = new List<ReferencePriorityMap>();
+            foreach (var item in _projectReferences)
+            {
+                if (item.ContainsKey(projectId))
+                {
+                    references.Add(item);
+                }
             }
 
+            foreach (var reference in references)
+            {
+                int priority = reference[projectId];
+                projectDeclaration.AddProjectReference(reference.ReferencedProjectId, priority);
+            }
+            return projectDeclaration;
         }
-        
+
         private void ResolveReferences(DeclarationFinder finder, VBComponent component, IParseTree tree)
         {
             var state = _state.GetModuleState(component);
@@ -395,9 +588,8 @@ namespace Rubberduck.Parsing.VBA
             {
                 return;
             }
-
-            Debug.WriteLine("Resolving '{0}'... (thread {1})", component.Name, Thread.CurrentThread.ManagedThreadId);            
             var qualifiedName = new QualifiedModuleName(component);
+            Logger.Debug("Resolving identifier references in '{0}'... (thread {1})", qualifiedName.Name, Thread.CurrentThread.ManagedThreadId);
             var resolver = new IdentifierReferenceResolver(qualifiedName, finder);
             var listener = new IdentifierReferenceListener(resolver);
             if (!string.IsNullOrWhiteSpace(tree.GetText().Trim()))
@@ -405,88 +597,38 @@ namespace Rubberduck.Parsing.VBA
                 var walker = new ParseTreeWalker();
                 try
                 {
+                    Stopwatch watch = Stopwatch.StartNew();
                     walker.Walk(listener, tree);
+                    watch.Stop();
+                    Logger.Debug("Binding Resolution done for component '{0}' in {1}ms (thread {2})", component.Name, watch.ElapsedMilliseconds, Thread.CurrentThread.ManagedThreadId);
+                    _state.RebuildSelectionCache();
                     state = ParserState.Ready;
                 }
                 catch (Exception exception)
                 {
-                    Debug.Print("Exception thrown resolving '{0}' (thread {2}): {1}", component.Name, exception, Thread.CurrentThread.ManagedThreadId);
+                    Logger.Error(exception, "Exception thrown resolving '{0}' (thread {1}).", component.Name, Thread.CurrentThread.ManagedThreadId);
                     state = ParserState.ResolverError;
                 }
             }
 
             _state.SetModuleState(component, state);
-            Debug.Print("'{0}' is {1}. Resolver took {2}ms to complete (thread {3})", component.Name, _state.GetModuleState(component), /*_resolverTimer[component].ElapsedMilliseconds*/0, Thread.CurrentThread.ManagedThreadId);
+            Logger.Debug("'{0}' is {1} (thread {2})", component.Name, _state.GetModuleState(component), Thread.CurrentThread.ManagedThreadId);
         }
 
-        #region Listener classes
-        private class ObsoleteCallStatementListener : VBAParserBaseListener
+        public void Dispose()
         {
-            private readonly IList<VBAParser.ExplicitCallStmtContext> _contexts = new List<VBAParser.ExplicitCallStmtContext>();
-            public IEnumerable<VBAParser.ExplicitCallStmtContext> Contexts { get { return _contexts; } }
+            State.ParseRequest -= ReparseRequested;
 
-            public override void ExitExplicitCallStmt(VBAParser.ExplicitCallStmtContext context)
+            if (_central != null)
             {
-                var procedureCall = context.eCS_ProcedureCall();
-                if (procedureCall != null)
-                {
-                    if (procedureCall.CALL() != null)
-                    {
-                        _contexts.Add(context);
-                        return;
-                    }
-                }
+                //_central.Cancel();
+                _central.Dispose();
+            }
 
-                var memberCall = context.eCS_MemberProcedureCall();
-                if (memberCall == null) return;
-                if (memberCall.CALL() == null) return;
-                _contexts.Add(context);
+            if (_resolverTokenSource != null)
+            {
+                _resolverTokenSource.Dispose();
             }
         }
-
-        private class ObsoleteLetStatementListener : VBAParserBaseListener
-        {
-            private readonly IList<VBAParser.LetStmtContext> _contexts = new List<VBAParser.LetStmtContext>();
-            public IEnumerable<VBAParser.LetStmtContext> Contexts { get { return _contexts; } }
-
-            public override void ExitLetStmt(VBAParser.LetStmtContext context)
-            {
-                if (context.LET() != null)
-                {
-                    _contexts.Add(context);
-                }
-            }
-        }
-
-        private class EmptyStringLiteralListener : VBAParserBaseListener
-        {
-            private readonly IList<VBAParser.LiteralContext> _contexts = new List<VBAParser.LiteralContext>();
-            public IEnumerable<VBAParser.LiteralContext> Contexts { get { return _contexts; } }
-
-            public override void ExitLiteral(VBAParser.LiteralContext context)
-            {
-                var literal = context.STRINGLITERAL();
-                if (literal != null && literal.GetText() == "\"\"")
-                {
-                    _contexts.Add(context);
-                }
-            }
-        }
-
-        private class ArgListWithOneByRefParamListener : VBAParserBaseListener
-        {
-            private readonly IList<VBAParser.ArgListContext> _contexts = new List<VBAParser.ArgListContext>();
-            public IEnumerable<VBAParser.ArgListContext> Contexts { get { return _contexts; } }
-
-            public override void ExitArgList(VBAParser.ArgListContext context)
-            {
-                if (context.arg() != null && context.arg().Count(a => a.BYREF() != null || (a.BYREF() == null && a.BYVAL() == null)) == 1)
-                {
-                    _contexts.Add(context);
-                }
-            }
-        }
-
-        #endregion
     }
 }
